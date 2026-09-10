@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <circle cx="50" cy="50" r="48" fill="#0B3D5C"/>
+  <circle cx="50" cy="50" r="42" stroke="#2E9CBF" stroke-width="2" stroke-dasharray="4 2"/>
+  <!-- ORCA Fin / Wave Motif -->
+  <path d="M22 62C28 42 42 32 58 24C52 38 48 48 64 54C74 58 80 62 76 68C68 72 56 66 50 64C42 62 30 70 22 62Z" fill="#FFFFFF"/>
+  <path d="M38 52C42 40 50 34 58 24C54 36 50 44 62 48" stroke="#38BDF8" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="68" cy="40" r="3.5" fill="#38BDF8"/>
+  <circle cx="68" cy="40" r="7" stroke="#38BDF8" stroke-width="1.5" opacity="0.6"/>
+</svg>
