@@ -25,12 +25,15 @@ import {
   Activity,
   Satellite
 } from 'lucide-react';
+import { ImdTropicalAlertBanner } from '../components/common/ImdTropicalAlertBanner';
 
 export function DashboardPage({
   onNavigateTab,
+  onNavigateToAlerts = null,
   onAskOrca,
   onHighlightMap,
-  onOpenSos = null
+  onOpenSos = null,
+  onOpenBulletin = null
 }) {
   const { role, currentRole } = useRole();
   const { t } = useLanguage();
@@ -48,6 +51,14 @@ export function DashboardPage({
 
   return (
     <div className="space-y-6">
+      {/* Real-time IMD Tropical Weather Outlook & Disaster Early Warning (Home Page Top Area) */}
+      <ImdTropicalAlertBanner
+        onNavigateToAlerts={onNavigateToAlerts ? onNavigateToAlerts : () => onNavigateTab('alerts')}
+        onNavigateToMap={onHighlightMap}
+        onAskOrca={onAskOrca}
+        onOpenBulletin={onOpenBulletin}
+      />
+
       {/* Hero Welcome & Risk Status Strip */}
       <div className="bg-gradient-to-r from-ocean-deep via-ocean-navy to-ocean-medium text-white rounded-2xl p-5 md:p-6 shadow-marine relative overflow-hidden">
         {/* Subtle decorative wave pattern */}

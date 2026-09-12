@@ -1,5 +1,22 @@
 export const MOCK_ALERTS = [
   {
+    id: 'IMD-TROP-2026-09',
+    title: 'IMD 24h Tropical Weather Outlook: Low Pressure Area Active over NW & WC Bay of Bengal',
+    category: 'Tropical Weather Outlook / Cyclone Warning',
+    severity: 'HIGH',
+    timestamp: 'Live Feed (IMD RSMC New Delhi)',
+    issuedBy: 'India Meteorological Department (RSMC New Delhi & ACWC Kolkata)',
+    affectedRegions: ['South Odisha Coast', 'North Andhra Coast', 'Northwest & Westcentral Bay of Bengal'],
+    coordinates: [18.50, 84.80],
+    radiusKm: 220,
+    windSpeedMax: '55 km/h (Squalls gusting 65 km/h)',
+    waveHeightMax: '3.4m (Rough Sea Condition)',
+    summary: 'Active Low Pressure Area centered over coastal areas of south Odisha - north Andhra Pradesh. Cyclonic circulation extends up to 9.4 km above mean sea level. Likely to move west-northwestwards and intensify during next 24 hours with squally winds.',
+    actionRequired: 'Total suspension of all fishing operations in NW & WC Bay of Bengal and along Odisha & North Andhra coasts. Vessels in deep sea advised to return to shelter harbor immediately.',
+    status: 'ACTIVE',
+    isRealImdData: true
+  },
+  {
     id: 'ALT-CYC-2026-04',
     title: 'Cyclonic Depression "ASNA" Approaching Southwest Arabian Sea',
     category: 'Cyclone / Storm',
@@ -15,6 +32,7 @@ export const MOCK_ALERTS = [
     actionRequired: 'Total suspension of all fishing and recreational coastal voyages. All crafts in deep sea advised to return to nearest shelter harbor immediately.',
     status: 'ACTIVE'
   },
+
   {
     id: 'ALT-SWL-2026-19',
     title: 'High Swell Surge (Kallakkadal) Warning along Kerala & South TN',

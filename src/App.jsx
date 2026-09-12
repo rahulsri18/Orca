@@ -34,11 +34,18 @@ export function AppContent() {
   const [highlightedCoords, setHighlightedCoords] = useState(null);
   const [chatInitialQuery, setChatInitialQuery] = useState(null);
   const [showDailyBulletin, setShowDailyBulletin] = useState(false);
+  const [selectedBulletinPort, setSelectedBulletinPort] = useState('Kochi Fishing Harbor');
   const [showSosModal, setShowSosModal] = useState(false);
+  const [alertRegionFilter, setAlertRegionFilter] = useState('ALL');
 
   const setActiveTab = (tab) => {
     setActiveTabState(tab);
     window.location.hash = tab;
+  };
+
+  const handleNavigateToAlerts = (region = 'ALL') => {
+    setAlertRegionFilter(region);
+    setActiveTab('alerts');
   };
 
   useEffect(() => {
@@ -77,7 +84,7 @@ export function AppContent() {
       {/* Sticky Top Alert Banner for Severe Warnings */}
       <AlertBanner
         alert={activeSevereAlert}
-        onNavigateToAlerts={() => setActiveTab('alerts')}
+        onNavigateToAlerts={() => handleNavigateToAlerts('odisha')}
       />
 
       {/* Main Top Header */}
@@ -99,9 +106,14 @@ export function AppContent() {
         {activeTab === 'dashboard' && (
           <DashboardPage
             onNavigateTab={setActiveTab}
+            onNavigateToAlerts={handleNavigateToAlerts}
             onAskOrca={handleAskOrca}
             onHighlightMap={handleHighlightMap}
             onOpenSos={() => setShowSosModal(true)}
+            onOpenBulletin={(port) => {
+              if (port) setSelectedBulletinPort(port);
+              setShowDailyBulletin(true);
+            }}
           />
         )}
 
@@ -130,6 +142,11 @@ export function AppContent() {
           <AlertsPage
             onNavigateToMap={handleHighlightMap}
             onAskOrca={handleAskOrca}
+            initialRegionFilter={alertRegionFilter}
+            onOpenBulletin={(port) => {
+              if (port) setSelectedBulletinPort(port);
+              setShowDailyBulletin(true);
+            }}
           />
         )}
 
@@ -156,6 +173,7 @@ export function AppContent() {
       <DailyBulletinModal
         isOpen={showDailyBulletin}
         onClose={() => setShowDailyBulletin(false)}
+        port={selectedBulletinPort}
       />
 
       {/* Emergency SOS Distress Modal (Works 100% Offline) */}

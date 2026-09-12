@@ -408,6 +408,68 @@ export function MapWidget({
     });
     groups.cyclone.addLayer(cycloneEye);
 
+    // 6B. Active IMD Low Pressure Area & 24h Tropical Outlook (Bay of Bengal / Odisha-AP Coast)
+    const imdLowPressureCoords = [
+      [17.4, 85.9],
+      [18.0, 85.3],
+      [18.5, 84.8],
+      [19.3, 83.8]
+    ];
+    const imdLowPressureTrack = L.polyline(imdLowPressureCoords, {
+      color: '#DC2626',
+      weight: 3.5,
+      dashArray: '6, 6'
+    }).bindTooltip('IMD 24h Outlook Track: WNW Intensification across Odisha-AP', { sticky: true });
+    groups.cyclone.addLayer(imdLowPressureTrack);
+
+    const imdLowPressureCircle = L.circle([18.5, 84.8], {
+      radius: 120000,
+      color: '#DC2626',
+      fillColor: '#EF4444',
+      fillOpacity: 0.22,
+      weight: 2,
+      dashArray: '5, 5'
+    }).bindTooltip('IMD Severe Hazard Cone: Low Pressure Area (Squalls 55-65 km/h)', { sticky: true });
+    groups.cyclone.addLayer(imdLowPressureCircle);
+
+    const imdLowPressureEye = L.marker([18.5, 84.8], {
+      icon: L.divIcon({
+        className: 'cyclone-eye-bob',
+        html: `
+          <div style="background: linear-gradient(135deg, #7F1D1D, #DC2626); color: white; border-radius: 9999px; padding: 4px 10px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 20px rgba(220, 38, 38, 0.9); border: 2px solid white; cursor: pointer;">
+            <span style="animation: spin 3s linear infinite; display: inline-block;">🌀</span>
+            <span>IMD LOW PRESSURE [24H OUTLOOK]</span>
+          </div>
+        `,
+        iconAnchor: [90, 15]
+      })
+    });
+
+    const bobPopupHtml = `
+      <div style="font-family: Inter, sans-serif; min-width: 250px; padding: 4px;">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+          <span style="background: #DC2626; color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">IMD RED ALERT</span>
+          <span style="font-size: 11px; color: #64748B; font-weight: 600;">RSMC New Delhi</span>
+        </div>
+        <h4 style="font-weight: 800; font-size: 13px; color: #0F172A; margin: 0 0 4px 0;">
+          Low Pressure Area & Cyclonic Circulation
+        </h4>
+        <p style="font-size: 11px; color: #475569; line-height: 1.4; margin-bottom: 8px;">
+          Centered off South Odisha - North Andhra Pradesh coasts. Moving WNW with squally winds 40-55 km/h gusting 65 km/h and rough seas (3.2m waves).
+        </p>
+        <div style="background: #FEF2F2; border: 1px solid #FCA5A5; padding: 6px; border-radius: 6px; font-size: 11px; color: #991B1B; font-weight: 700; margin-bottom: 8px;">
+          ⚠️ Total suspension of fishing operations in NW & WC Bay of Bengal.
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 6px;">
+          <span>Coords: 18.50°N, 84.80°E</span>
+          <span style="color: #DC2626; font-weight: 700;">Valid: Next 24 Hours</span>
+        </div>
+      </div>
+    `;
+    imdLowPressureEye.bindPopup(bobPopupHtml);
+    groups.cyclone.addLayer(imdLowPressureEye);
+
+
     // 7. Lightning Clusters
     const lightningPt = [14.85, 73.90];
     const lightningMarker = L.marker(lightningPt, {

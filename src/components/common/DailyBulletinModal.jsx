@@ -140,12 +140,28 @@ export function DailyBulletinModal({ isOpen, onClose, port = 'Kochi Fishing Harb
 
           {/* Section 2: Active Severe Alert Directive */}
           <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-xs space-y-1.5">
-            <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
-              <AlertOctagon className="w-4 h-4 text-rose-600" />
-              <span>{t('officialDirectives', 'MANDATORY DIRECTIVE')}: {t(activeAlert.title)}</span>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
+                <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{t('officialDirectives', 'MANDATORY DIRECTIVE')}: {t(activeAlert.title)}</span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-600 text-white font-bold">
+                IMD 24H OUTLOOK
+              </span>
             </div>
             <p className="text-rose-950 leading-relaxed font-medium">
               {t(activeAlert.actionRequired)}
+            </p>
+          </div>
+
+          {/* Section 2B: IMD Synoptic Situation Dispatch */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 font-sans">
+            <div className="flex items-center justify-between text-slate-700 font-bold text-[11px] uppercase tracking-wider">
+              <span>🏛️ IMD ACWC Kolkata & Mumbai Marine Weather Dispatch</span>
+              <span className="text-[10px] font-mono text-ocean-deep">Coordinates: 18.50°N, 84.80°E</span>
+            </div>
+            <p className="text-slate-800 leading-relaxed font-mono text-[11px] bg-white p-2.5 rounded-lg border border-slate-200">
+              "The Low Pressure Area over Northwest-Westcentral Bay of Bengal & adjoining south Odisha-north Andhra Pradesh coasts lay over Coastal areas of south Odisha - north Andhra Pradesh. Associated cyclonic circulation extends up to 9.4 km above mean sea level. Likely to move west-northwestwards across south Odisha - north Coastal Andhra Pradesh during the next 24 hours with squally winds 40-55 km/h gusting 65 km/h. Sea condition rough to very rough."
             </p>
           </div>
 
