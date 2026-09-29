@@ -4,6 +4,7 @@ import { useRole, USER_ROLES } from '../../context/RoleContext';
 import {
   Shield,
   ShieldCheck,
+  ShieldAlert,
   Lock,
   User,
   Anchor,
@@ -161,23 +162,6 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
     }, 400);
   };
 
-  // Quick Demo Fills
-  const handleQuickDemoFill = (email, pass, roleKey) => {
-    setLoginId(email);
-    setLoginPassword(pass);
-    setErrorMsg(null);
-    login(email, pass);
-    if (roleKey && roleKey !== 'admin') {
-      setRole(roleKey);
-    }
-  };
-
-  const handleQuickAdminDemo = () => {
-    setAdminEmail('admin@orca.gov.in');
-    setAdminPassword('orcaadmin123');
-    setErrorMsg(null);
-    login('admin@orca.gov.in', 'orcaadmin123');
-  };
 
   const roleMeta = {
     fisherman: {
@@ -379,7 +363,7 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Capt. Murugan Sundaram"
+                      placeholder="Enter full name / title"
                       className="w-full bg-[#051422] border border-[#18476F] rounded px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#2EAFD0]"
                     />
                   </div>
@@ -393,7 +377,7 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
                       required
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="murugan@matsya.in"
+                      placeholder="Enter official email address"
                       className="w-full bg-[#051422] border border-[#18476F] rounded px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#2EAFD0]"
                     />
                   </div>
@@ -407,7 +391,7 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
                       required
                       value={regPhone}
                       onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="+91 98470 12345 / VUY2"
+                      placeholder="Enter phone number or callsign"
                       className="w-full bg-[#051422] border border-[#18476F] rounded px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#2EAFD0]"
                     />
                   </div>
@@ -705,59 +689,45 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
                 </form>
               </div>
 
-              {/* Right Column: 1-Click Role Quick Demos */}
-              <div className="bg-[#0B2942] border border-[#18476F] rounded p-4 space-y-2.5">
-                <span className="text-[10px] font-mono font-bold text-[#2EAFD0] uppercase tracking-wider block border-b border-[#18476F] pb-1.5">
-                  ⚡ ONE-CLICK DEMO AUTHENTICATION (ALL 4 ROLES):
-                </span>
+              {/* Right Column: Official Security & Verification Guidelines */}
+              <div className="bg-[#0B2942] border border-[#18476F] rounded p-4 space-y-3">
+                <div className="flex items-center gap-2 border-b border-[#18476F] pb-2">
+                  <ShieldCheck className="w-4 h-4 text-[#34D399]" />
+                  <span className="font-mono font-bold text-xs text-white uppercase tracking-wider">
+                    SECURITY & IDENTITY PROTOCOLS
+                  </span>
+                </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div className="space-y-2 text-xs font-sans text-slate-300">
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#2EAFD0] font-mono font-bold">•</span>
+                    <span>
+                      <strong className="text-white">Unified Identifier:</strong> Authenticate using your registered Email, Official RealCraft Vessel ID, or Ministry Service Number.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#2EAFD0] font-mono font-bold">•</span>
+                    <span>
+                      <strong className="text-white">Role Telemetry Sync:</strong> Once authenticated, tactical views and safety margins automatically align with your operational tier.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#2EAFD0] font-mono font-bold">•</span>
+                    <span>
+                      <strong className="text-white">Encrypted Transit:</strong> All communication and emergency broadcasts are protected with SHA-256 session integrity.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[#18476F]/80 flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-slate-400">Need credentials?</span>
                   <button
                     type="button"
-                    onClick={() => handleQuickDemoFill('murugan@matsya.in', 'fish123', 'fisherman')}
-                    className="p-2 rounded bg-[#071A2B] hover:bg-[#0F3456] border border-[#18476F] hover:border-[#2EAFD0] text-left transition-colors cursor-pointer"
+                    onClick={() => { setActiveTab('register'); setErrorMsg(null); setSuccessMsg(null); }}
+                    className="text-[#2EAFD0] hover:text-white hover:underline cursor-pointer flex items-center gap-1 font-bold"
                   >
-                    <div className="flex items-center gap-1.5 font-bold text-white text-[11px]">
-                      <Anchor className="w-3.5 h-3.5 text-[#2EAFD0]" />
-                      <span>Fisherman</span>
-                    </div>
-                    <div className="text-[10px] text-[#2EAFD0] truncate mt-0.5">Capt. Murugan</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('verma@ndma.gov.in', 'ndma123', 'authority')}
-                    className="p-2 rounded bg-[#071A2B] hover:bg-[#0F3456] border border-[#18476F] hover:border-[#FB7185] text-left transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-white text-[11px]">
-                      <Shield className="w-3.5 h-3.5 text-[#FB7185]" />
-                      <span>Disaster Auth</span>
-                    </div>
-                    <div className="text-[10px] text-[#FB7185] truncate mt-0.5">Cmdr. Verma</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('arvind@cochinport.gov.in', 'port123', 'operator')}
-                    className="p-2 rounded bg-[#071A2B] hover:bg-[#0F3456] border border-[#18476F] hover:border-[#FBBF24] text-left transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-white text-[11px]">
-                      <Compass className="w-3.5 h-3.5 text-[#FBBF24]" />
-                      <span>Port Operator</span>
-                    </div>
-                    <div className="text-[10px] text-[#FBBF24] truncate mt-0.5">Capt. Arvind</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoFill('ananya@incois.gov.in', 'incois123', 'researcher')}
-                    className="p-2 rounded bg-[#071A2B] hover:bg-[#0F3456] border border-[#18476F] hover:border-[#34D399] text-left transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-white text-[11px]">
-                      <Activity className="w-3.5 h-3.5 text-[#34D399]" />
-                      <span>Ocean Scientist</span>
-                    </div>
-                    <div className="text-[10px] text-[#34D399] truncate mt-0.5">Dr. Ananya</div>
+                    <span>ENROLL HERE</span>
+                    <span>→</span>
                   </button>
                 </div>
               </div>
@@ -773,26 +743,25 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
           <div className="p-3 sm:p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
               
-              {/* Left Column: Terminal clearance info & bypass */}
+              {/* Left Column: Terminal clearance info */}
               <div className="bg-[#2E1219] border border-[#FB7185]/60 rounded p-4 space-y-3">
                 <div className="flex items-center gap-2 text-[#FB7185] font-mono font-bold text-xs uppercase tracking-wider">
-                  <Lock className="w-4 h-4 animate-pulse" />
+                  <Lock className="w-4 h-4" />
                   <span>ADMINISTRATIVE COMMAND CLEARANCE</span>
                 </div>
 
-                <div className="text-slate-300 text-[11px] leading-relaxed">
-                  Restricted Level-5 TS clearance terminal. Authorizes global fleet transponder dossier audits, RealCraft compliance grants, and strategic coastal alerts.
-                </div>
+                <p className="text-slate-300 text-xs leading-relaxed">
+                  Restricted Level-5 TS clearance terminal. Direct interface for maritime fleet roster auditing, transponder compliance inspection, and strategic disaster overrides.
+                </p>
 
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={handleQuickAdminDemo}
-                    className="w-full py-2 px-3 rounded bg-[#0B2942] hover:bg-[#0F3456] text-[#2EAFD0] hover:text-white border border-[#0D5C7A] text-xs font-mono transition-colors cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#2EAFD0]" />
-                    <span>One-Click Admin Login (Demo Evaluation)</span>
-                  </button>
+                <div className="pt-2 border-t border-[#FB7185]/30 space-y-1.5 text-[11px] font-mono text-slate-300">
+                  <div className="flex items-center gap-2 text-[#FB7185]">
+                    <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-bold uppercase">Restricted Access Notice</span>
+                  </div>
+                  <p className="text-slate-400 leading-normal">
+                    Administrative access requires an authorized government account and security access token. All access attempts and modifications are cryptographically audited.
+                  </p>
                 </div>
               </div>
 
