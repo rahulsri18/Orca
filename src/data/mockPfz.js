@@ -1,5 +1,24 @@
 export const MOCK_PFZ = [
   {
+    id: 'PFZ-KL-01',
+    zoneName: 'Chellanam Thermal Plume',
+    region: 'Kerala (Kochi Sector)',
+    coordinates: [9.80, 76.12],
+    distanceNm: 18.5,
+    bearing: '248° WSW',
+    depthMeters: 42,
+    sstCelsius: 28.4,
+    chlorophyllMgM3: 1.85,
+    suitabilityScore: 94,
+    riskLevel: 'LOW',
+    primarySpecies: ['Oil Sardine', 'Indian Mackerel', 'Skipjack Tuna'],
+    satelliteSensor: 'ISRO Oceansat-3 OCM-3',
+    observationTime: 'Today, 06:30 IST',
+    safeWindow: 'Valid till tomorrow 14:00 IST',
+    waveForecast: '1.2m (Moderate Swell)',
+    windForecast: '12 knots (Favorable Westerly)'
+  },
+  {
     id: 'PFZ-AP-01',
     zoneName: 'Vizag Offshore Bank 3B',
     region: 'Andhra Pradesh (Visakhapatnam)',

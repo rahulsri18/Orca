@@ -6,12 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api/imd': {
-        target: 'https://mausam.imd.gov.in',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/imd/, '')
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
       }
     }
   }
 })
-

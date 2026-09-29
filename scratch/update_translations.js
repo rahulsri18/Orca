@@ -117,7 +117,7 @@ const newTranslations = {
 
       // Daily Bulletin
       officialBulletinTitle: "Official Daily Coastal Marine Safety Bulletin",
-      bulletinGovt: "Government of India • Ministry of Earth Sciences • ISRO SIH26176",
+      bulletinGovt: "Government of India • Ministry of Earth Sciences • ISRO",
       bulletinIssuedFor: "Issued for",
       bulletinValid: "Valid for next 24 Hours",
       bulletinOverallRisk: "Overall Risk Level",
@@ -241,7 +241,7 @@ const newTranslations = {
 
       // Daily Bulletin
       officialBulletinTitle: "आधिकारिक दैनिक तटीय समुद्री सुरक्षा बुलेटिन",
-      bulletinGovt: "भारत सरकार • पृथ्वी विज्ञान मंत्रालय • इसरो SIH26176",
+      bulletinGovt: "भारत सरकार • पृथ्वी विज्ञान मंत्रालय • इसरो",
       bulletinIssuedFor: "के लिए जारी",
       bulletinValid: "अगले 24 घंटों के लिए मान्य",
       bulletinOverallRisk: "समग्र जोखिम स्तर",
@@ -365,7 +365,7 @@ const newTranslations = {
 
       // Daily Bulletin
       officialBulletinTitle: "அதிகாரப்பூர்வ தினசரி கடலோர பாதுகாப்பு அறிக்கை",
-      bulletinGovt: "இந்திய அரசு • புவி அறிவியல் அமைச்சகம் • இஸ்ரோ SIH26176",
+      bulletinGovt: "இந்திய அரசு • புவி அறிவியல் அமைச்சகம் • இஸ்ரோ",
       bulletinIssuedFor: "வழங்கப்பட்ட இடம்",
       bulletinValid: "அடுத்த 24 மணி நேரத்திற்கு செல்லுபடியாகும்",
       bulletinOverallRisk: "ஒட்டுமொத்த ஆபத்து நிலை",
@@ -489,7 +489,7 @@ const newTranslations = {
 
       // Daily Bulletin
       officialBulletinTitle: "అధికారిక రోజువారీ తీరప్రాంత భద్రతా బులెటిన్",
-      bulletinGovt: "భారత ప్రభుత్వం • భూ శాస్త్రాల మంత్రిత్వ శాఖ • ఇస్రో SIH26176",
+      bulletinGovt: "భారత ప్రభుత్వం • భూ శాస్త్రాల మంత్రిత్వ శాఖ • ఇస్రో",
       bulletinIssuedFor: "జారీ చేయబడిన ప్రాంతం",
       bulletinValid: "తదుపరి 24 గంటలకు చెల్లుబాటు",
       bulletinOverallRisk: "మొత్తం ప్రమాద స్థాయి",
@@ -613,7 +613,7 @@ const newTranslations = {
 
       // Daily Bulletin
       officialBulletinTitle: "অফিসিয়াল দৈনিক উপকূলীয় সামুদ্রিক সুরক্ষা বুলেটিন",
-      bulletinGovt: "ভারত সরকার • ভূ-বিজ্ঞান মন্ত্রক • ইসরো SIH26176",
+      bulletinGovt: "ভারত সরকার • ভূ-বিজ্ঞান মন্ত্রক • ইসরো",
       bulletinIssuedFor: "প্রদত্ত এলাকা",
       bulletinValid: "পরবর্তী ২৪ ঘণ্টার জন্য বৈধ",
       bulletinOverallRisk: "সামগ্রিক ঝুঁকির মাত্রা",
@@ -737,7 +737,7 @@ const newTranslations = {
 
       // Daily Bulletin
       officialBulletinTitle: "ഔദ്യോഗിക പ്രതിദിന തീരദേശ സുരക്ഷാ ബുള്ളറ്റിൻ",
-      bulletinGovt: "ഭാരത സർക്കാർ • ഭൗമശാസ്ത്ര മന്ത്രാലയം • ഐഎസ്ആർഒ SIH26176",
+      bulletinGovt: "ഭാരത സർക്കാർ • ഭൗമശാസ്ത്ര മന്ത്രാലയം • ഐഎസ്ആർഒ",
       bulletinIssuedFor: "നൽകപ്പെട്ട പ്രദേശം",
       bulletinValid: "അടുത്ത 24 മണിക്കൂറിലേക്ക് ബാധകം",
       bulletinOverallRisk: "മൊത്തം അപകട നില",

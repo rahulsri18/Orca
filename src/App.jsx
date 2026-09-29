@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { LanguageProvider } from './context/LanguageContext';
 import { RoleProvider } from './context/RoleContext';
 import { ConnectivityProvider } from './context/ConnectivityContext';
+import { AuthProvider } from './context/AuthContext';
 import { Header } from './components/layout/Header';
-import { Navigation } from './components/layout/Navigation';
+import { Sidebar } from './components/layout/Sidebar';
+import { BottomStatusBar } from './components/layout/BottomStatusBar';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
-import { AlertBanner } from './components/common/AlertBanner';
 import { DailyBulletinModal } from './components/common/DailyBulletinModal';
 import { EmergencySosModal } from './components/sos/EmergencySosModal';
 import { DashboardPage } from './pages/DashboardPage';
@@ -60,7 +61,6 @@ export function AppContent() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  const activeSevereAlert = MOCK_ALERTS.find(a => a.severity === 'HIGH');
   const activeAlertCount = MOCK_ALERTS.filter(a => a.status === 'ACTIVE').length;
 
   const handleAskOrca = (zoneOrObj) => {
@@ -79,15 +79,11 @@ export function AppContent() {
     setActiveTab('map');
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      {/* Sticky Top Alert Banner for Severe Warnings */}
-      <AlertBanner
-        alert={activeSevereAlert}
-        onNavigateToAlerts={() => handleNavigateToAlerts('odisha')}
-      />
+  const isFullBleedTab = activeTab === 'map' || activeTab === 'chat';
 
-      {/* Main Top Header */}
+  return (
+    <div className="h-screen bg-[#F4F7F8] text-slate-900 flex flex-col font-sans overflow-hidden">
+      {/* Main Tactical Top Header */}
       <Header
         activeAlertCount={activeAlertCount}
         onNavigateTab={setActiveTab}
@@ -95,79 +91,92 @@ export function AppContent() {
         onOpenSos={() => setShowSosModal(true)}
       />
 
-      {/* Desktop Navigation Tabs */}
-      <Navigation
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+      {/* Global Console Workspace: Left Sidebar + Center Viewport */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Operational Sidebar (Desktop) */}
+        <Sidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          alertCount={activeAlertCount}
+        />
 
-      {/* Main Viewport Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
-        {activeTab === 'dashboard' && (
-          <DashboardPage
-            onNavigateTab={setActiveTab}
-            onNavigateToAlerts={handleNavigateToAlerts}
-            onAskOrca={handleAskOrca}
-            onHighlightMap={handleHighlightMap}
-            onOpenSos={() => setShowSosModal(true)}
-            onOpenBulletin={(port) => {
-              if (port) setSelectedBulletinPort(port);
-              setShowDailyBulletin(true);
-            }}
-          />
-        )}
+        {/* Main Viewport */}
+        <main className={`flex-1 overflow-y-auto ${isFullBleedTab ? 'p-0 overflow-hidden' : 'p-3 sm:p-5 lg:p-6 pb-20 md:pb-6'}`}>
+          <div className={isFullBleedTab ? 'h-full w-full' : 'max-w-7xl mx-auto'}>
+            {activeTab === 'dashboard' && (
+              <DashboardPage
+                onNavigateTab={setActiveTab}
+                onNavigateToAlerts={handleNavigateToAlerts}
+                onAskOrca={handleAskOrca}
+                onHighlightMap={handleHighlightMap}
+                onOpenSos={() => setShowSosModal(true)}
+                onOpenBulletin={(port) => {
+                  if (port) setSelectedBulletinPort(port);
+                  setShowDailyBulletin(true);
+                }}
+              />
+            )}
 
-        {activeTab === 'map' && (
-          <MapPage
-            highlightedCoordinates={highlightedCoords}
-            onAskOrca={handleAskOrca}
-          />
-        )}
+            {activeTab === 'map' && (
+              <MapPage
+                highlightedCoordinates={highlightedCoords}
+                onAskOrca={handleAskOrca}
+              />
+            )}
 
-        {activeTab === 'chat' && (
-          <ChatPage
-            onHighlightMap={handleHighlightMap}
-            initialQuery={chatInitialQuery}
-          />
-        )}
+            {activeTab === 'chat' && (
+              <ChatPage
+                onHighlightMap={handleHighlightMap}
+                initialQuery={chatInitialQuery}
+              />
+            )}
 
-        {activeTab === 'pfz' && (
-          <PfzPage
-            onAskOrca={handleAskOrca}
-            onNavigateToMap={handleHighlightMap}
-          />
-        )}
+            {activeTab === 'pfz' && (
+              <PfzPage
+                onAskOrca={handleAskOrca}
+                onNavigateToMap={handleHighlightMap}
+              />
+            )}
 
-        {activeTab === 'alerts' && (
-          <AlertsPage
-            onNavigateToMap={handleHighlightMap}
-            onAskOrca={handleAskOrca}
-            initialRegionFilter={alertRegionFilter}
-            onOpenBulletin={(port) => {
-              if (port) setSelectedBulletinPort(port);
-              setShowDailyBulletin(true);
-            }}
-          />
-        )}
+            {activeTab === 'alerts' && (
+              <AlertsPage
+                onNavigateToMap={handleHighlightMap}
+                onAskOrca={handleAskOrca}
+                initialRegionFilter={alertRegionFilter}
+                onOpenBulletin={(port) => {
+                  if (port) setSelectedBulletinPort(port);
+                  setShowDailyBulletin(true);
+                }}
+              />
+            )}
 
-        {activeTab === 'routes' && (
-          <RoutesPage
-            onNavigateToMap={() => setActiveTab('map')}
-          />
-        )}
+            {activeTab === 'routes' && (
+              <RoutesPage
+                onNavigateToMap={(coords) => {
+                  if (coords) setHighlightedCoords(coords);
+                  setActiveTab('map');
+                }}
+                onAskOrca={handleAskOrca}
+              />
+            )}
 
-        {activeTab === 'analytics' && (
-          <AnalyticsPage />
-        )}
+            {activeTab === 'analytics' && (
+              <AnalyticsPage />
+            )}
 
-        {activeTab === 'satellites' && (
-          <SatellitePage />
-        )}
+            {activeTab === 'satellites' && (
+              <SatellitePage />
+            )}
 
-        {activeTab === 'profile' && (
-          <ProfilePage />
-        )}
-      </main>
+            {activeTab === 'profile' && (
+              <ProfilePage />
+            )}
+          </div>
+        </main>
+      </div>
+
+      {/* Global Telematics Bottom Status Bar (Desktop) */}
+      <BottomStatusBar />
 
       {/* Official Daily Marine Safety Bulletin Modal */}
       <DailyBulletinModal
@@ -197,7 +206,9 @@ export default function App() {
     <LanguageProvider>
       <RoleProvider>
         <ConnectivityProvider>
-          <AppContent />
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
         </ConnectivityProvider>
       </RoleProvider>
     </LanguageProvider>

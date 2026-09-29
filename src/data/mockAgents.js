@@ -58,78 +58,77 @@ export const AGENT_ROSTER = [
 export const DEMO_SCENARIOS = {
   kochi: {
     query: "Is it safe to fish tomorrow near Kochi coast?",
-    targetZone: "Kochi Offshore (Zone A-1)",
+    targetZone: "Kochi Offshore",
     coordinates: [9.9312, 76.2673],
     riskLevel: "HIGH",
-    riskScore: 84, // 0 - 100
-    confidenceScore: 94, // %
-    headline: "HIGH RISK: Rough Sea State & Gale Warning in Effect",
-    recommendation: "DO NOT VENTURE into sea beyond 3 nautical miles tomorrow. An active cyclonic depression in the Southeast Arabian Sea is generating squally winds up to 55 km/h (30 knots) and high swell waves reaching 3.4m. Country crafts and small motorized boats must remain anchored.",
+    riskScore: 84,
+    confidenceScore: 94,
+    headline: "🚨 DO NOT GO TO SEA TODAY (DANGEROUS SEA)",
+    recommendation: "Stay in harbor. Dangerous waves over 11 feet (3.4 meters) and stormy winds will flip small boats. Keep your boat tied in port until Thursday when sea calms down.",
     conditionsSummary: {
-      waveHeight: "3.2m - 3.6m (Very Rough)",
-      windSpeed: "28 - 32 knots (Squally)",
-      sst: "29.1°C (Thermal Anomaly +1.2°C)",
-      visibility: "Poor (3-5 km in rain)",
-      tide: "High Tide at 07:45 IST (1.4m)",
-      lightning: "Severe cluster detected 18km WSW"
+      "Sea Waves": "11 feet high (3.4m) — Very Rough",
+      "Wind Speed": "55 km/h (Storm Gale)",
+      "Sea Temp": "29°C (Warm Sea)",
+      "Storm Alert": "Cyclone Asna passing 48 NM away",
+      "Harbor Mouth": "Dangerous crashing waves",
+      "What To Do": "STAY IN HARBOR — DO NOT VENTURE"
     },
     sources: [
-      { name: "INCOIS Ocean State Forecast", id: "OSF-KL-892", time: "10 mins ago" },
-      { name: "IMD Kochi Doppler Radar", id: "DWR-KOC-04", time: "5 mins ago" },
-      { name: "ISRO Oceansat-3 OCM", id: "OCM3-ORBIT-4421", time: "42 mins ago" },
-      { name: "NavIC Coastal AIS Transponder", id: "AIS-STN-COCHIN", time: "Live" }
+      { name: "INCOIS Sea State Buoys", id: "OSF-KL-892", time: "10 mins ago" },
+      { name: "IMD Weather Radar", id: "DWR-KOC-04", time: "5 mins ago" },
+      { name: "ISRO Oceansat-3 Satellite", id: "OCM3-ORBIT-4421", time: "42 mins ago" }
     ],
     agentSteps: [
       {
         agentId: 'planner',
         status: 'completed',
         durationMs: 240,
-        action: 'Parsing query & identifying spatial bounds',
-        findings: 'Target: Kochi Coast (9.93°N, 76.26°E). Time horizon: T+12h to T+36h. Vessel class: Artisanal / Small motorized fishing craft.'
+        action: 'Checking trip safety for Kochi fishing boats',
+        findings: 'Target: Kochi Coast. Time: Next 24 hours. Vessel: Small motorized & country boats.'
       },
       {
         agentId: 'ocean',
         status: 'completed',
         durationMs: 380,
-        action: 'Querying INCOIS wave buoys & Oceansat-3 SST/Chlorophyll',
-        findings: 'Buoy #AD02 reports Significant Wave Height 3.4m, Peak Period 12.8s (High Swell Surge). SST 29.1°C with strong thermal divergence.'
+        action: 'Checking ocean buoys for wave height',
+        findings: 'Sea buoy reports 3.4 meter (11 feet) rough waves. High swell surge makes boat roll heavily.'
       },
       {
         agentId: 'weather',
         status: 'completed',
         durationMs: 340,
-        action: 'Analyzing IMD Doppler radar & INSAT-3DR cloud cover',
-        findings: 'Gale wind warning active. Sustained winds 28 kts gusting to 35 kts. Doppler radar confirms heavy convective squall line approaching from WSW.'
+        action: 'Checking storm radar and wind speed',
+        findings: 'Strong gale winds blowing at 55 km/h. Rain clouds and squalls moving in from southwest.'
       },
       {
         agentId: 'geo',
         status: 'completed',
         durationMs: 290,
-        action: 'Evaluating bathymetry & harbor approach channels',
-        findings: 'Shallow bar mouth at Kochi Port entrance indicates breaking surf risk. Wave breaking index 0.78 (dangerous for small craft).'
+        action: 'Checking harbor entrance water depth',
+        findings: 'Waves are crashing hard at the Kochi harbor mouth. High danger of boat capsizing on return.'
       },
       {
         agentId: 'risk',
         status: 'completed',
         durationMs: 410,
-        action: 'Synthesizing multi-variable hazard index',
-        findings: 'Calculated Composite Marine Risk Score: 84/100 (HIGH RISK). Primary risk drivers: Swell surge (45%), Squall wind gust (35%), Low visibility (20%).'
+        action: 'Calculating total danger score',
+        findings: 'Danger Score: 84 / 100 (HIGH RISK). High danger of capsizing and engine trouble.'
       },
       {
         agentId: 'decision',
         status: 'completed',
         durationMs: 310,
-        action: 'Formulating safety advisory and fallback alternatives',
-        findings: 'Decision reached: Issue Red Alert advisory. Recommend postponement of all fishing operations until T+48h when swell drops below 1.8m.'
+        action: 'Creating final fisherman advice',
+        findings: 'Final Decision: RED ALERT. Tell fishermen to stay in harbor until sea calms down.'
       }
     ],
     explainability: {
-      decisionSummary: "Advisory to withhold fishing operations is driven by concurrent high wave surge (>3.2m) and convective squall gusts reaching Force 7 on the Beaufort scale.",
+      decisionSummary: "Do not go out because 11-foot waves and 55 km/h winds can easily flip small wooden and FRP fishing boats.",
       riskWeights: [
-        { factor: "Wave & Swell Height (3.4m)", weight: 42, impact: "Critical risk of small craft capsize" },
-        { factor: "Wind Speed & Gale Gusts (32 kts)", weight: 28, impact: "High drift and navigation impairment" },
-        { factor: "Lightning Proximity (<20km)", weight: 18, impact: "Direct strike hazard for open wood/FRP boats" },
-        { factor: "Harbor Bar Surf Breaking", weight: 12, impact: "High hazard during return transit" }
+        { factor: "Dangerous High Waves (11 feet / 3.4m)", weight: 42, impact: "Very high risk of boat flipping over" },
+        { factor: "Strong Storm Winds (55 km/h)", weight: 28, impact: "Boat will drift away, engine cannot fight" },
+        { factor: "Thunderstorm Rain Clouds", weight: 18, impact: "Zero visibility and lightning strike risk" },
+        { factor: "Harbor Mouth Crashing Waves", weight: 12, impact: "Dangerous to re-enter harbor safely" }
       ],
       confidenceBreakdown: {
         overall: 94,
@@ -142,78 +141,77 @@ export const DEMO_SCENARIOS = {
 
   vizag: {
     query: "Show today's best PFZ coordinates off Visakhapatnam",
-    targetZone: "Vizag Offshore Bank (PFZ-VZ-03)",
+    targetZone: "Visakhapatnam Offshore",
     coordinates: [17.6868, 83.2185],
     riskLevel: "LOW",
     riskScore: 18,
     confidenceScore: 96,
-    headline: "EXCELLENT CONDITIONS: Prime Potential Fishing Zone Identified",
-    recommendation: "Safe to venture. Oceanographic sensors confirm a prime Potential Fishing Zone (PFZ) located 14.2 nautical miles East-Southeast of Visakhapatnam Harbor (17.62°N, 83.45°E). Favorable thermal front (27.4°C) overlapping high chlorophyll density (1.42 mg/m³) indicates high pelagic fish aggregation (Tuna & Mackerel).",
+    headline: "✅ SAFE TO FISH TODAY (GOOD CATCH ZONE)",
+    recommendation: "Safe to go fishing today. Calm sea with small gentle waves under 3 feet (0.9m). Good fish catch zone (Tuna and Mackerel) located 26 km East of harbor.",
     conditionsSummary: {
-      waveHeight: "0.8m - 1.1m (Smooth to Slight)",
-      windSpeed: "8 - 12 knots (Gentle breeze)",
-      sst: "27.4°C (Optimal front)",
-      visibility: "Clear (>10 km)",
-      tide: "Low Tide 12:10 IST, Next High 18:20 IST",
-      lightning: "No lightning detected within 120km"
+      "Sea Waves": "Under 3 feet (0.9m) — Calm Sea",
+      "Wind Speed": "Gentle breeze (18 km/h)",
+      "Sea Temp": "27.4°C (Good Fish Water)",
+      "Target Fish": "Tuna & Mackerel",
+      "Distance": "26 km (14 NM) East of port",
+      "What To Do": "SAFE TO GO — Great day to fish"
     },
     sources: [
-      { name: "ISRO Oceansat-3 OCM Ocean Color", id: "OCM3-VZ-901", time: "25 mins ago" },
-      { name: "INCOIS PFZ Mission Node", id: "PFZ-AP-09", time: "1 hr ago" },
-      { name: "IMD Visakhapatnam Radar", id: "DWR-VZG-01", time: "15 mins ago" },
-      { name: "NOAA/AVHRR SST Blend", id: "SST-MODIS-IN", time: "2 hrs ago" }
+      { name: "ISRO Oceansat-3 Fish Satellite", id: "OCM3-VZ-901", time: "25 mins ago" },
+      { name: "INCOIS Fish Advisory Node", id: "PFZ-AP-09", time: "1 hr ago" },
+      { name: "IMD Weather Radar", id: "DWR-VZG-01", time: "15 mins ago" }
     ],
     agentSteps: [
       {
         agentId: 'planner',
         status: 'completed',
         durationMs: 210,
-        action: 'Task dispatch for biological productivity & sea safety',
-        findings: 'Target: Visakhapatnam offshore waters. Objective: Detect thermal-chlorophyll front congruence and evaluate safety window.'
+        action: 'Finding fish zone and checking safety',
+        findings: 'Target: Vizag coast. Finding where fish are feeding and checking if sea is calm.'
       },
       {
         agentId: 'ocean',
         status: 'completed',
         durationMs: 360,
-        action: 'Processing Oceansat-3 OCM & INCOIS PFZ algorithm',
-        findings: 'Strong biological boundary detected at 17.62°N, 83.45°E. Chlorophyll gradient 1.42 mg/m³ with cyclonic eddy upwelling nutrients.'
+        action: 'Checking satellite picture for fish food (algae)',
+        findings: 'Satellite shows large green fish food zone at 17.62°N, 83.45°E. Big schools of Tuna feeding here.'
       },
       {
         agentId: 'weather',
         status: 'completed',
         durationMs: 310,
-        action: 'Reviewing atmospheric stability and wind forecast',
-        findings: 'Calm atmospheric profile. Gentle southeasterly breeze 10 kts. Sea state code 2. No squall or precipitation triggers for 36 hours.'
+        action: 'Checking wind and rain forecast',
+        findings: 'Weather is clear and calm. Gentle breeze at 18 km/h. No storms expected for 3 days.'
       },
       {
         agentId: 'geo',
         status: 'completed',
         durationMs: 280,
-        action: 'Checking transit corridor and underwater hazards',
-        findings: 'PFZ point is 14.2 nm from outer fishing harbor. Clear of Vizag Port commercial shipping lanes and naval exercise corridors.'
+        action: 'Checking navigation route from fishing harbor',
+        findings: 'Fish zone is 26 km (14 NM) from harbor. Path is completely clear of big cargo ships.'
       },
       {
         agentId: 'risk',
         status: 'completed',
         durationMs: 370,
-        action: 'Evaluating vessel safety thresholds',
-        findings: 'Composite Risk Score: 18/100 (LOW RISK). Safety index: 9.2/10. Optimal operational window open until Thursday 18:00 IST.'
+        action: 'Checking safety score',
+        findings: 'Risk is 18 / 100 (VERY SAFE). Great sea condition for small and large boats.'
       },
       {
         agentId: 'decision',
         status: 'completed',
         durationMs: 290,
-        action: 'Formulating PFZ coordinates and catch advisory',
-        findings: 'High-confidence green recommendation. Transmitting coordinates (17.62°N, 83.45°E) with estimated fuel efficiency index of 88%.'
+        action: 'Writing simple fish advice',
+        findings: 'Decision: Green light. Send GPS coordinates to boats with expected good fish catch.'
       }
     ],
     explainability: {
-      decisionSummary: "High suitability score is derived from optimal chlorophyll-thermal coincidence verified by Oceansat-3, combined with calm sea conditions across all marine buoys.",
+      decisionSummary: "Safe to fish because waves are gentle (under 3 feet) and satellite confirms large schools of fish feeding in this area.",
       riskWeights: [
-        { factor: "Chlorophyll-SST Front Match", weight: 45, impact: "Exceptional pelagic fish aggregation probability" },
-        { factor: "Wave Height (<1.1m)", weight: 30, impact: "Safe operation for all vessel classes" },
-        { factor: "Wind Forecast (10 kts)", weight: 15, impact: "Minimal drift, low fuel consumption" },
-        { factor: "Shipping Lane Clearance", weight: 10, impact: "Zero maritime traffic conflict" }
+        { factor: "Lots of Fish Food (Algae)", weight: 45, impact: "High chance of catching Tuna & Mackerel" },
+        { factor: "Calm Waves (under 3 feet)", weight: 30, impact: "Safe for small country and fiberglass boats" },
+        { factor: "Gentle Breeze (18 km/h)", weight: 15, impact: "Smooth ride, uses less boat diesel" },
+        { factor: "Clear Ship Path", weight: 10, impact: "No big cargo ships in your fishing area" }
       ],
       confidenceBreakdown: {
         overall: 96,
@@ -226,78 +224,75 @@ export const DEMO_SCENARIOS = {
 
   mannar: {
     query: "Marine alert status for Gulf of Mannar & Rameswaram",
-    targetZone: "Gulf of Mannar Biosphere Reserve",
+    targetZone: "Rameswaram / Gulf of Mannar",
     coordinates: [9.2876, 79.3129],
     riskLevel: "MEDIUM",
     riskScore: 56,
     confidenceScore: 89,
-    headline: "MODERATE CAUTION: Squally Winds & Coral Geofence Restrictions",
-    recommendation: "EXERCISE CAUTION. Gusty easterly winds (18-22 knots) and moderate swell waves (1.8m - 2.2m) are observed in the Palk Strait and Gulf of Mannar. Mechanized vessels may operate with vigilance, but small artisanal crafts should avoid deep reef passages. Note: Marine National Park Sanctuary boundaries are strictly geofenced.",
+    headline: "⚠️ BE CAREFUL — NEAR SHORE ONLY",
+    recommendation: "Stay close to shore. Choppy waves (2 meters / 6.5 feet) and gusty winds in the strait. Large boats can fish with caution, but small country boats should stay inside the bay. Do not cross the international border line.",
     conditionsSummary: {
-      waveHeight: "1.8m - 2.2m (Moderate)",
-      windSpeed: "18 - 22 knots (Breezy/Gusty)",
-      sst: "28.5°C",
-      visibility: "Moderate (7 km in sea mist)",
-      tide: "Tidal Surge +0.6m in shallow reef channels",
-      lightning: "Scattered lightning 45km Southeast"
+      "Sea Waves": "6.5 feet (2.0m) — Choppy Sea",
+      "Wind Speed": "Gusty wind (35 km/h)",
+      "Sea Reefs": "Shallow rocks at low tide",
+      "Border Alert": "Stay 4 km away from border line",
+      "What To Do": "CAUTION — Fish near shore only"
     },
     sources: [
       { name: "INCOIS Tamil Nadu Coastal Node", id: "OSF-TN-412", time: "18 mins ago" },
-      { name: "NavIC Marine Sanctuary Geofence", id: "MNP-ZONE-02", time: "Live" },
-      { name: "IMD Chennai Radar Feed", id: "DWR-CHN-08", time: "22 mins ago" },
-      { name: "Coast Guard Maritime Safety Net", id: "CG-MSN-RAM", time: "1 hr ago" }
+      { name: "NavIC Sanctuary Border Map", id: "MNP-ZONE-02", time: "Live" }
     ],
     agentSteps: [
       {
         agentId: 'planner',
         status: 'completed',
         durationMs: 230,
-        action: 'Query analysis for environmentally sensitive coastal zone',
-        findings: 'Target: Rameswaram / Gulf of Mannar. Sensitivity: Biosphere reserve sanctuary boundary and shallow coral reef bathymetry.'
+        action: 'Checking sea and border rules for Rameswaram',
+        findings: 'Target: Gulf of Mannar and Palk Strait. Checking wind swell and border line.'
       },
       {
         agentId: 'ocean',
         status: 'completed',
         durationMs: 390,
-        action: 'Bathymetric analysis & swell modeling',
-        findings: 'Swell waves 2.0m interacting with shallow continental shelf, creating steep choppy waves in Pamban pass.'
+        action: 'Checking shallow coral reefs and waves',
+        findings: 'Waves are 2 meters high. Shallow coral rocks can damage boat propellers during low tide.'
       },
       {
         agentId: 'weather',
         status: 'completed',
         durationMs: 330,
-        action: 'Atmospheric pressure gradient evaluation',
-        findings: 'High pressure gradient across Gulf of Mannar generating wind funnelling through Palk Strait at 20 knots.'
+        action: 'Checking wind gusts through the strait',
+        findings: 'Brisk wind funnelling through the strait at 35 km/h causing sudden rolling waves.'
       },
       {
         agentId: 'geo',
         status: 'completed',
         durationMs: 350,
-        action: 'Verifying Marine Protected Area & IMBL boundaries',
-        findings: 'Warning: 3 fishing vessels detected within 1.2 nautical miles of International Maritime Boundary Line (IMBL) buffer zone.'
+        action: 'Checking distance to International Border Line',
+        findings: 'Caution: Some boats are getting close to the international border line.'
       },
       {
         agentId: 'risk',
         status: 'completed',
         durationMs: 400,
-        action: 'Synthesizing environmental and navigation hazards',
-        findings: 'Composite Risk Score: 56/100 (MEDIUM / CAUTION). Hazard triggers: Shallow reef grounding risk + wind swell + international boundary proximity.'
+        action: 'Calculating safety risk',
+        findings: 'Risk Score: 56 / 100 (YELLOW CAUTION). Safe only for bigger boats near shore.'
       },
       {
         agentId: 'decision',
         status: 'completed',
         durationMs: 300,
-        action: 'Drafting conditional advisory with geofence alert',
-        findings: 'Advisory issued: Exercise caution. Avoid Pamban bridge channel during high ebb tide. Maintain strict 2nm clearance from IMBL.'
+        action: 'Preparing fisherman safety advice',
+        findings: 'Advice: Caution. Keep small boats inside the bay and stay well clear of border line.'
       }
     ],
     explainability: {
-      decisionSummary: "Moderate caution score reflects a confluence of gusty wind swell and high sensitivity to maritime boundary lines and shallow coral reefs.",
+      decisionSummary: "Be careful because gusty winds create choppy waves and you must stay away from shallow rocks and the border line.",
       riskWeights: [
-        { factor: "Wind Funneling in Palk Strait", weight: 35, impact: "Steep choppy waves challenging for open crafts" },
-        { factor: "IMBL Boundary Proximity", weight: 25, impact: "Risk of accidental border crossing" },
-        { factor: "Coral Reef Depth Hazard", weight: 25, impact: "Risk of propeller and hull grounding at low tide" },
-        { factor: "Tidal Current Surge", weight: 15, impact: "Strong drift in Pamban channel" }
+        { factor: "Gusty Wind (35 km/h)", weight: 35, impact: "Choppy waves make small boats wobble heavily" },
+        { factor: "Border Line Proximity", weight: 25, impact: "Risk of accidentally crossing border" },
+        { factor: "Shallow Coral Rocks", weight: 25, impact: "Can hit bottom and break boat propeller" },
+        { factor: "Water Currents", weight: 15, impact: "Strong drift near Pamban bridge" }
       ],
       confidenceBreakdown: {
         overall: 89,
@@ -310,77 +305,75 @@ export const DEMO_SCENARIOS = {
 
   route: {
     query: "Plot safest return route to Mangalore avoiding rough waters",
-    targetZone: "Mangalore Coastal Corridor",
+    targetZone: "Mangalore Sea Path",
     coordinates: [12.9141, 74.8560],
     riskLevel: "LOW",
     riskScore: 24,
     confidenceScore: 93,
-    headline: "SAFE ROUTE COMPUTED: High-Wave Zone Circumvented",
-    recommendation: "Safe route calculated from current offshore coordinates (13.15°N, 74.45°E) to Mangalore Old Port. The direct course crosses an active 2.9m breaking swell zone off Malpe Bank. ORCA's recommended waypoint path shifts your heading 15° West into deep water (42m depth), reducing maximum wave encounter to 1.4m and saving 18% fuel with favorable tidal drift.",
+    headline: "🧭 SAFER SEA ROUTE FOUND",
+    recommendation: "Take the outer deep-water path to Mangalore. The direct straight path has breaking rough waves (over 9 feet). Moving slightly west into deeper water keeps waves down to 4 feet and saves fuel.",
     conditionsSummary: {
-      waveHeight: "1.2m - 1.5m along safe corridor (vs 2.9m direct)",
-      windSpeed: "14 knots NNW",
-      sst: "28.3°C",
-      visibility: "Good (>8 km)",
-      tide: "Ebb tide assisting southbound transit",
-      lightning: "Nil"
+      "Straight Path": "Rough waves (9.5 feet / 2.9m)",
+      "Safe Outer Path": "Calm waves (4.5 feet / 1.4m)",
+      "Diesel Saved": "Saves about 18% fuel",
+      "Arrival Time": "About 2 hours 45 minutes",
+      "What To Do": "Follow the green deep-water path"
     },
     sources: [
-      { name: "INCOIS Coastal Routing System", id: "CRS-KA-11", time: "12 mins ago" },
-      { name: "New Mangalore Port Vessel Traffic Service", id: "VTS-NMPT-03", time: "Live" },
-      { name: "IMD Mangalore Station", id: "AWS-MNG-99", time: "30 mins ago" }
+      { name: "INCOIS Sea Route Map", id: "CRS-KA-11", time: "12 mins ago" },
+      { name: "Mangalore Port Traffic", id: "VTS-NMPT-03", time: "Live" }
     ],
     agentSteps: [
       {
         agentId: 'planner',
         status: 'completed',
         durationMs: 220,
-        action: 'Route optimization & waypoint calculation',
-        findings: 'Origin: Offshore Malpe (13.15°N, 74.45°E). Destination: Mangalore Port (12.91°N, 74.85°E). Direct distance: 28.4 nm.'
+        action: 'Finding calm path back to Mangalore port',
+        findings: 'Start: Sea near Malpe. Destination: Mangalore Harbor. Distance: 28 nautical miles.'
       },
       {
         agentId: 'ocean',
         status: 'completed',
         durationMs: 370,
-        action: 'Scanning spatial wave height grid across route candidates',
-        findings: 'Nearshore Malpe-Udupi corridor shows high shoaling wave surge of 2.9m due to submerged rocky shoals.'
+        action: 'Checking where high waves are breaking',
+        findings: 'The near-shore straight path has 9-foot crashing waves over shallow sand banks.'
       },
       {
         agentId: 'weather',
         status: 'completed',
         durationMs: 300,
-        action: 'Evaluating prevailing wind and surface currents',
-        findings: 'NNW wind at 14 kts with 0.8 knot southbound longshore current. Favorable tailwind on recommended offshore vector.'
+        action: 'Checking wind and water current direction',
+        findings: 'Wind is blowing from northwest. A helpful water current will push your boat south toward port.'
       },
       {
         agentId: 'geo',
         status: 'completed',
         durationMs: 310,
-        action: 'Calculating safe depth contour and harbor approach',
-        findings: 'Maintains >30m contour until final approach buoy (Fairway Buoy #1) of Mangalore Harbor. Avoids St. Mary island rocky reefs.'
+        action: 'Picking deep water path',
+        findings: 'Steering into deeper water keeps boat away from rocky islands and shallow breakers.'
       },
       {
         agentId: 'risk',
         status: 'completed',
         durationMs: 380,
-        action: 'Evaluating dynamic safety envelope',
-        findings: 'Direct path risk: 72/100 (HIGH). ORCA Waypoint path risk: 24/100 (LOW). Risk delta: -48 points.'
+        action: 'Comparing danger of straight path vs outer path',
+        findings: 'Straight path is HIGH DANGER (72/100). Outer path is LOW DANGER (24/100).'
       },
       {
         agentId: 'decision',
         status: 'completed',
         durationMs: 280,
-        action: 'Generating waypoint route instruction card',
-        findings: 'Route approved: Waypoint WP-1 (13.08°N, 74.52°E) -> WP-2 (12.98°N, 74.68°E) -> Mangalore Fairway. ETA: 2h 45m @ 10 kts.'
+        action: 'Sending simple steering instructions',
+        findings: 'Route Ready: Steer slightly west into deep water to enjoy calm sea and save diesel.'
       }
     ],
     explainability: {
-      decisionSummary: "The safe route deliberately deviates 3.8 nm seaward to bypass severe coastal shoaling waves while utilizing the southbound current for fuel conservation.",
+      decisionSummary: "The outer route is much safer because moving into deeper water avoids dangerous 9-foot crashing waves near the sand banks.",
       riskWeights: [
-        { factor: "Shoal Wave Avoidance (2.9m → 1.4m)", weight: 50, impact: "Eliminates dangerous beam-sea roll hazard" },
-        { factor: "Deep Water Bathymetry (>30m)", weight: 25, impact: "Prevents shallow-water wave steepening" },
-        { factor: "Favorable Surface Current (0.8 kts)", weight: 15, impact: "Reduces fuel consumption by ~18%" },
-        { factor: "Port VTS Corridor Alignment", weight: 10, impact: "Smooth pilotage entry into New Mangalore Port" }
+        { factor: "Wave Avoidance (9 ft down to 4 ft)", weight: 50, impact: "Prevents boat from violently rocking" },
+        { factor: "Deep Water Bathymetry", weight: 25, impact: "Deep water stops waves from suddenly breaking" },
+        { factor: "Helpful Sea Current", weight: 15, impact: "Pushes boat forward and saves 18% diesel" },
+        { factor: "Clear Port Entrance", weight: 10, impact: "Smooth easy entry into Mangalore harbor" }
       ],
       confidenceBreakdown: {
         overall: 93,

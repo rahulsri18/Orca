@@ -1,6 +1,6 @@
 /**
  * Maritime Profile & Identity Management Service
- * Built for Smart India Hackathon (SIH26176 / ISRO Disaster Management)
+ * ISRO Disaster Management & Coastal Maritime Safety
  * 
  * Manages official government-aligned maritime identities for Indian seafarers,
  * coastal fishermen, disaster authorities, port operators, and ocean researchers.

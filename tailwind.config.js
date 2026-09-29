@@ -7,38 +7,57 @@ export default {
   theme: {
     extend: {
       colors: {
-        ocean: {
-          deep: '#0B3D5C',
-          dark: '#07273C',
-          navy: '#0F4D71',
-          medium: '#1C7293',
-          teal: '#2E9CBF',
-          cyan: '#38BDF8',
-          light: '#EBF4F6',
-          mist: '#F0F7FA',
+        // Operational Maritime Color System
+        navy: {
+          deep: '#071A2B',      // Command background & primary dark
+          ocean: '#0B2942',     // Surfaces, headers, cards
+          surface: '#0F3456',   // Raised borders and active elements
+          muted: '#18476F',
         },
         marine: {
-          safe: '#2E8B57',
-          safeLight: '#E8F5E9',
-          warning: '#E67E22',
-          warningLight: '#FEF3E2',
-          danger: '#C0392B',
-          dangerLight: '#FDECEA',
+          blue: '#0D5C7A',      // Accents and secondary controls
+          teal: '#0F8B8D',      // Primary interactive / selection
+          cyan: '#2EAFD0',      // Highlight / telemetry
+          light: '#EAF0F3',     // Secondary panel backgrounds
+          border: '#D1DCE5',    // Standard thin UI borders
+          bg: '#F4F7F8',        // Main application background
+        },
+        // Operational Risk Spectrum
+        risk: {
+          safe: '#1F9D72',
+          safeLight: '#E8F6F1',
+          caution: '#D89B24',
+          cautionLight: '#FBF5E8',
+          high: '#D96B3B',
+          highLight: '#FCEFE9',
+          critical: '#C93C4B',
+          criticalLight: '#FBECEE',
+        },
+        // Legacy mapping for seamless compatibility
+        ocean: {
+          deep: '#071A2B',
+          dark: '#051422',
+          navy: '#0B2942',
+          medium: '#0D5C7A',
+          teal: '#0F8B8D',
+          cyan: '#2EAFD0',
+          light: '#EAF0F3',
+          mist: '#F4F7F8',
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        'marine': '0 4px 20px -2px rgba(11, 61, 92, 0.12)',
-        'glow-cyan': '0 0 20px -3px rgba(56, 189, 248, 0.45)',
-        'glow-safe': '0 0 20px -3px rgba(46, 139, 87, 0.45)',
-        'glow-danger': '0 0 20px -3px rgba(192, 57, 43, 0.45)',
+        'subtle': '0 1px 3px 0 rgba(7, 26, 43, 0.06), 0 1px 2px 0 rgba(7, 26, 43, 0.04)',
+        'marine': '0 2px 8px 0 rgba(7, 26, 43, 0.08)',
+        'panel': '0 4px 12px 0 rgba(7, 26, 43, 0.1)',
+        'modal': '0 12px 32px 0 rgba(7, 26, 43, 0.25)',
       },
-      animation: {
-        'pulse-subtle': 'pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
-        'radar-sweep': 'spin 4s linear infinite',
+      borderRadius: {
+        'panel': '8px',
+        'card': '10px',
       }
     },
   },

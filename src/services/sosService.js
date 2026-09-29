@@ -1,6 +1,6 @@
 /**
  * Emergency SOS Service for Indian Fishermen & Coastal Mariners
- * Built for Smart India Hackathon (SIH26176 / ISRO Disaster Management)
+ * ISRO Disaster Management & Coastal Maritime Safety
  * 
  * Works 100% OFFLINE without cellular network or mobile data.
  * Leverages device hardware GPS, local queueing, NMEA 0183 / AIS distress telegrams,

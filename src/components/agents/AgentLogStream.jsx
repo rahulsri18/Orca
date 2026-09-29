@@ -7,7 +7,7 @@ export function AgentLogStream({ logs = [], isRunning = false }) {
       <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-slate-400">
         <div className="flex items-center gap-1.5">
           <Terminal className="w-3.5 h-3.5 text-sky-400" />
-          <span className="font-semibold text-slate-300">ORCA Multi-Agent Telemetry Bus (SIH26176)</span>
+          <span className="font-semibold text-slate-300">ORCA Multi-Agent Telemetry Bus</span>
         </div>
         <div className="flex items-center gap-2">
           {isRunning ? (

@@ -4,31 +4,74 @@
 
 @layer base {
   :root {
-    --color-ocean-deep: #0B3D5C;
-    --color-ocean-medium: #1C7293;
-    --color-ocean-teal: #2E9CBF;
-    --color-ocean-cyan: #38BDF8;
-    --color-marine-safe: #2E8B57;
-    --color-marine-warning: #E67E22;
-    --color-marine-danger: #C0392B;
+    --color-navy-deep: #071A2B;
+    --color-navy-ocean: #0B2942;
+    --color-marine-blue: #0D5C7A;
+    --color-ocean-teal: #0F8B8D;
+    --color-marine-bg: #F4F7F8;
+    --color-marine-panel: #EAF0F3;
+    --color-marine-border: #D1DCE5;
+    --color-risk-safe: #1F9D72;
+    --color-risk-caution: #D89B24;
+    --color-risk-high: #D96B3B;
+    --color-risk-critical: #C93C4B;
   }
 
   body {
-    background-color: #F8FAFC;
-    color: #1E293B;
+    background-color: #F4F7F8;
+    color: #071A2B;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'tnum';
     overflow-x: hidden;
     cursor: default;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 /* ==========================================================================
-   Remove Typing Effect / Blinking Caret & I-Beam Cursor on Plain Text
+   Tactical Marine Operational Styling Utilities
    ========================================================================== */
-*:not(input):not(textarea):not([contenteditable="true"]) {
-  caret-color: transparent !important;
+.marine-panel {
+  background-color: #FFFFFF;
+  border: 1px solid #D1DCE5;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(7, 26, 43, 0.05);
 }
 
-/* Ensure mouse pointer remains default pointer over text, not typing I-beam */
+.marine-panel-dark {
+  background-color: #0B2942;
+  border: 1px solid #18476F;
+  border-radius: 8px;
+  color: #FFFFFF;
+}
+
+.marine-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* Operational Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #EAF0F3;
+}
+::-webkit-scrollbar-thumb {
+  background: #B0C4D3;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #88A3B8;
+}
+
+/* Ensure mouse pointer remains default pointer over text */
 h1, h2, h3, h4, h5, h6, 
 p, span, div, label, 
 li, td, th, dt, dd,
@@ -36,105 +79,179 @@ article, section, header, nav, footer, main {
   cursor: default;
 }
 
-/* Interactive elements keep hand pointer */
+/* Interactive elements */
 a, button, [role="button"], select, .cursor-pointer, [type="button"], [type="submit"] {
   cursor: pointer;
 }
 
-/* Genuine input fields & textareas preserve legitimate typing cursor */
+/* Genuine input fields & textareas */
 input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]),
 textarea,
 [contenteditable="true"] {
   cursor: text !important;
-  caret-color: #0B3D5C !important;
   user-select: text !important;
 }
 
-/* Prevent text elements from acquiring focus outlines or blinking on click */
+/* Prevent unwanted focus rings on clicks */
 *:focus:not(input):not(textarea):not(select):not(button):not(a) {
   outline: none !important;
   box-shadow: none !important;
 }
 
-/* Custom modern scrollbar for high-density UI */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #F1F5F9;
-}
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
-}
-
-/* Glassmorphism utility classes */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-}
-
-.glass-header {
-  background: rgba(11, 61, 92, 0.96);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.glass-ocean {
-  background: linear-gradient(135deg, rgba(11, 61, 92, 0.95) 0%, rgba(28, 114, 147, 0.9) 100%);
-  backdrop-filter: blur(10px);
-}
-
-/* Custom Leaflet Map styling overrides */
+/* Custom Leaflet Map styling overrides for serious GIS cartography */
 .leaflet-container {
   width: 100%;
   height: 100%;
-  font-family: 'Inter', sans-serif !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
   z-index: 10;
+  background-color: #071A2B !important;
 }
 
 .leaflet-popup-content-wrapper {
   padding: 0 !important;
-  border-radius: 12px !important;
+  border-radius: 6px !important;
   overflow: hidden !important;
-  box-shadow: 0 10px 25px -5px rgba(11, 61, 92, 0.25) !important;
-  border: 1px solid #E2E8F8;
+  box-shadow: 0 4px 16px rgba(7, 26, 43, 0.2) !important;
+  border: 1px solid #0D5C7A !important;
+  background: #FFFFFF !important;
 }
 
 .leaflet-popup-content {
   margin: 0 !important;
-  line-height: 1.4 !important;
+  line-height: 1.35 !important;
 }
 
-/* Custom pulse animations for glowing agent nodes */
-@keyframes agent-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(46, 156, 191, 0.7);
+.leaflet-bar {
+  border: 1px solid #D1DCE5 !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 6px rgba(7, 26, 43, 0.1) !important;
+}
+
+.leaflet-bar a {
+  background-color: #FFFFFF !important;
+  color: #071A2B !important;
+  border-bottom: 1px solid #EAF0F3 !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #F4F7F8 !important;
+  color: #0F8B8D !important;
+}
+
+/* Animated Radar Sweep */
+@keyframes radarSweep {
+  from {
+    transform: rotate(0deg);
   }
-  70% {
-    box-shadow: 0 0 0 14px rgba(46, 156, 191, 0);
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.radar-sweep-beam {
+  animation: radarSweep 4s linear infinite;
+  transform-origin: center center;
+}
+
+/* Subtle Wave Pulse */
+@keyframes waveBreathing {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
+.wave-pulse {
+  animation: waveBreathing 3s ease-in-out infinite;
+}
+
+/* Ticker Marquee */
+@keyframes tickerTape {
+  0% {
+    transform: translateX(0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(46, 156, 191, 0);
+    transform: translateX(-50%);
   }
 }
 
-.animate-agent-active {
-  animation: agent-pulse 1.8s infinite;
+.ticker-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: tickerTape 32s linear infinite;
 }
 
-@keyframes wave-flow {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(-25%); }
-  100% { transform: translateX(0); }
+.ticker-marquee:hover {
+  animation-play-state: paused;
 }
 
-.animate-waves {
-  animation: wave-flow 12s ease-in-out infinite;
+/* ==========================================================================
+   Modern Glassmorphism & Cyber-Oceanic Visual Enhancements (High Contrast)
+   ========================================================================== */
+.glass-surface {
+  background: #071A2B;
+  border: 1px solid #18476F;
+  box-shadow: 0 10px 30px rgba(7, 26, 43, 0.25);
 }
+
+.glass-card {
+  background: #0B2942;
+  border: 1px solid #18476F;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.glass-card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-hover:hover {
+  background: #0F3456;
+  border-color: #2EAFD0;
+  box-shadow: 0 6px 20px -3px rgba(46, 175, 208, 0.25);
+}
+
+.glass-card-active {
+  background: #0B3356;
+  border: 2px solid #2EAFD0;
+  box-shadow: 0 0 20px rgba(46, 175, 208, 0.3);
+}
+
+.glass-input {
+  background: #051422;
+  border: 1px solid #18476F;
+  color: #FFFFFF;
+  transition: all 0.2s ease;
+}
+.glass-input:hover {
+  border-color: #2EAFD0;
+}
+.glass-input:focus {
+  background: #071A2B;
+  border-color: #2EAFD0;
+  box-shadow: 0 0 12px rgba(46, 175, 208, 0.35);
+  outline: none;
+}
+
+@keyframes ambientPulse {
+  0%, 100% {
+    transform: scale(1) translate(0, 0);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.12) translate(15px, -10px);
+    opacity: 0.55;
+  }
+}
+
+.ambient-orb {
+  animation: ambientPulse 8s ease-in-out infinite;
+}
+
+.ambient-orb-delayed {
+  animation: ambientPulse 10s ease-in-out infinite 3s;
+}
+

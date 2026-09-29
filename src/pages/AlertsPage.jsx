@@ -3,9 +3,9 @@ import { MOCK_ALERTS } from '../data/mockAlerts';
 import { RiskBadge } from '../components/common/RiskBadge';
 import { useLanguage } from '../context/LanguageContext';
 import { 
+  ShieldAlert, 
   AlertOctagon, 
   AlertTriangle, 
-  ShieldAlert, 
   Radio, 
   MapPin, 
   Volume2, 
@@ -15,12 +15,22 @@ import {
   Waves, 
   Compass, 
   Printer, 
-  Sparkles,
-  Filter,
-  CheckCircle2,
-  Anchor
+  Sparkles, 
+  Filter, 
+  CheckCircle2, 
+  Anchor, 
+  Clock, 
+  Send, 
+  Navigation, 
+  Check,
+  Calendar,
+  Zap,
+  Skull,
+  Activity,
+  Layers
 } from 'lucide-react';
-import { fetchLiveImdData, getCachedImdData, REGIONAL_SECTORS } from '../services/imdWeatherService';
+import { fetchLiveImdData, getCachedImdData } from '../services/imdWeatherService';
+import { getActiveAlerts } from '../services/apiClient';
 
 export function AlertsPage({ 
   onNavigateToMap = null, 
@@ -29,11 +39,76 @@ export function AlertsPage({
   initialRegionFilter = 'ALL'
 }) {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState('bulletin'); // 'bulletin' or 'alerts'
+  const [activeTab, setActiveTab] = useState('alerts'); // 'alerts' or 'bulletin'
+  const [severityFilter, setSeverityFilter] = useState('ALL'); // 'ALL', 'RED_ALERTS', 'CAUTION', 'ADVISORY'
+  const [categoryFilter, setCategoryFilter] = useState('ALL'); // 'ALL', 'OCEAN_WEATHER', 'SEISMIC', 'NAVIGATIONAL', 'SECURITY', 'LIGHTNING', 'ECOLOGICAL', 'PORT_CLOSURE'
   const [regionFilter, setRegionFilter] = useState(initialRegionFilter || 'ALL');
-  const [severityFilter, setSeverityFilter] = useState('ALL');
   const [imdData, setImdData] = useState(getCachedImdData);
   const [refreshing, setRefreshing] = useState(false);
+  const [broadcastSent, setBroadcastSent] = useState(false);
+  const [departureSuspended, setDepartureSuspended] = useState(false);
+  const [alertsList, setAlertsList] = useState(MOCK_ALERTS);
+
+  // Dynamic system clock in IST
+  const now = new Date();
+  const currentDateFormatted = now.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+  const currentTimeFormatted = now.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }) + ' IST';
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLiveAlerts() {
+      try {
+        const live = await getActiveAlerts();
+        if (isMounted && Array.isArray(live) && live.length > 0) {
+          const liveMapped = live.map(a => ({
+            id: a.id,
+            title: a.title,
+            category: a.category,
+            dangerType: a.category,
+            severity: a.severity === 'CRITICAL' ? 'HIGH' : a.severity,
+            date: a.issue_time?.split('•')[0]?.trim() || currentDateFormatted,
+            time: a.issue_time?.split('•')[1]?.trim() || currentTimeFormatted,
+            dateTime: a.issue_time || `${currentDateFormatted} • ${currentTimeFormatted}`,
+            validUntil: a.valid_until || `Tomorrow • 18:00 IST`,
+            issuedBy: a.issuing_authority,
+            affectedRegions: [a.affected_region],
+            coordinates: [18.50, 84.80],
+            radiusKm: 180,
+            windSpeedMax: '65 km/h',
+            waveHeightMax: '3.8m',
+            summary: a.description,
+            actionRequired: a.action_directive,
+            status: a.status,
+            isRedAlert: a.severity === 'CRITICAL' || a.severity === 'HIGH'
+          }));
+
+          setAlertsList(prev => {
+            const map = new Map();
+            liveMapped.forEach(item => map.set(item.id, item));
+            prev.forEach(item => { if (!map.has(item.id)) map.set(item.id, item); });
+            return Array.from(map.values());
+          });
+        }
+      } catch (err) {
+        // Fallback gracefully to dynamic local alerts
+      }
+    }
+
+    loadLiveAlerts();
+    const pollTimer = setInterval(loadLiveAlerts, 20000); // Live background refresh
+    return () => {
+      isMounted = false;
+      clearInterval(pollTimer);
+    };
+  }, [currentDateFormatted, currentTimeFormatted]);
 
   useEffect(() => {
     if (initialRegionFilter) {
@@ -57,724 +132,656 @@ export function AlertsPage({
     handleRefreshImd();
   }, []);
 
-  // Filter alerts by severity and region
-  const filteredAlerts = MOCK_ALERTS.filter(alt => {
-    // Severity filter
-    if (severityFilter !== 'ALL' && alt.severity !== severityFilter) {
-      return false;
+  // Filter alerts by severity, category, and region
+  const filteredAlerts = alertsList.filter(alt => {
+    // Severity Filter
+    if (severityFilter === 'RED_ALERTS' && alt.severity !== 'HIGH') return false;
+    if (severityFilter === 'SEVERE' && alt.severity !== 'HIGH') return false;
+    if (severityFilter === 'CAUTION' && alt.severity !== 'MEDIUM') return false;
+    if (severityFilter === 'ADVISORY' && alt.severity !== 'LOW') return false;
+
+    // Category / Danger Type Filter
+    if (categoryFilter !== 'ALL') {
+      if (categoryFilter === 'OCEAN_WEATHER' && alt.dangerType !== 'OCEAN_WEATHER') return false;
+      if (categoryFilter === 'SEISMIC' && alt.dangerType !== 'SEISMIC') return false;
+      if (categoryFilter === 'NAVIGATIONAL' && alt.dangerType !== 'NAVIGATIONAL') return false;
+      if (categoryFilter === 'SECURITY' && alt.dangerType !== 'SECURITY') return false;
+      if (categoryFilter === 'LIGHTNING' && alt.dangerType !== 'LIGHTNING') return false;
+      if (categoryFilter === 'ECOLOGICAL' && alt.dangerType !== 'ECOLOGICAL') return false;
+      if (categoryFilter === 'PORT_CLOSURE' && alt.dangerType !== 'PORT_CLOSURE') return false;
     }
 
-    // Region filter
-    if (regionFilter === 'ALL') return true;
-
-    const regionsStr = (alt.affectedRegions || []).join(' ').toLowerCase();
-    const titleStr = (alt.title || '').toLowerCase();
-    const summaryStr = (alt.summary || '').toLowerCase();
-    const combined = `${regionsStr} ${titleStr} ${summaryStr}`;
-
-    if (regionFilter === 'odisha') return combined.includes('odisha') || combined.includes('paradip') || combined.includes('gopalpur');
-    if (regionFilter === 'andhra') return combined.includes('andhra') || combined.includes('visakhapatnam') || combined.includes('vizag') || combined.includes('kakinada');
-    if (regionFilter === 'kerala') return combined.includes('kerala') || combined.includes('kochi') || combined.includes('kollam') || combined.includes('thiruvananthapuram');
-    if (regionFilter === 'lakshadweep') return combined.includes('lakshadweep') || combined.includes('kavaratti');
-    if (regionFilter === 'palkbay') return combined.includes('palk bay') || combined.includes('mannar') || combined.includes('rameswaram') || combined.includes('imbl');
-    if (regionFilter === 'tamilnadu') return combined.includes('tamil') || combined.includes('chennai') || combined.includes('kanyakumari');
-    if (regionFilter === 'maharashtra') return combined.includes('maharashtra') || combined.includes('mumbai') || combined.includes('konkan');
-    if (regionFilter === 'gujarat') return combined.includes('gujarat') || combined.includes('veraval') || combined.includes('okha');
-    if (regionFilter === 'goa') return combined.includes('goa') || combined.includes('karwar');
-    if (regionFilter === 'karnataka') return combined.includes('karnataka') || combined.includes('mangalore') || combined.includes('karwar');
-    if (regionFilter === 'bengal') return combined.includes('bengal') || combined.includes('digha') || combined.includes('sundarbans');
-    if (regionFilter === 'andaman') return combined.includes('andaman') || combined.includes('nicobar');
+    // Region Filter
+    if (regionFilter !== 'ALL') {
+      const regionsStr = (alt.affectedRegions || []).join(' ').toLowerCase();
+      const titleStr = (alt.title || '').toLowerCase();
+      const combined = `${regionsStr} ${titleStr}`;
+      if (!combined.includes(regionFilter.toLowerCase())) return false;
+    }
 
     return true;
   });
 
+  const redAlertCount = MOCK_ALERTS.filter(a => a.severity === 'HIGH').length;
+  const cautionCount = MOCK_ALERTS.filter(a => a.severity === 'MEDIUM').length;
+  const advisoryCount = MOCK_ALERTS.filter(a => a.severity === 'LOW').length;
+
   const outlook = imdData.tropicalWeatherOutlook;
   const bob = imdData.bayOfBengal;
   const as = imdData.arabianSea;
-  const telemetry = imdData.liveMarineTelemetry;
-
-  // Selected region details
-  const selectedRegionObj = REGIONAL_SECTORS.find(r => r.id === regionFilter);
-  const selectedRegionLive = (imdData.regionalData || []).find(r => r.id === regionFilter) || selectedRegionObj;
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-rose-950 via-rose-900 to-ocean-deep text-white rounded-2xl p-5 md:p-6 shadow-marine">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-white/10 backdrop-blur border border-white/20">
-              <ShieldAlert className="w-6 h-6 text-rose-300 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl md:text-2xl font-bold">{t('alertsPageTitle', 'Marine Hazard & Safety Broadcast Center')}</h1>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-rose-500/30 text-rose-200 border border-rose-400/30 animate-pulse">
-                  {t('activeCoastalAlert', 'Active Coastal Alert')}
-                </span>
-              </div>
-              <p className="text-xs md:text-sm text-rose-100/80 mt-1">
-                {t('alertsPageSub', 'Multi-agency early warning feeds from IMD Cyclone Warning Centre, INCOIS Tsunami/Surge, and Coast Guard NavIC.')}
-              </p>
-            </div>
+    <div className="space-y-3 font-sans max-w-7xl mx-auto pb-8">
+      {/* 1. TOP EMERGENCY BANNER WITH DATE & LIVE TRACKING */}
+      <div className="bg-[#071A2B] border-l-4 border-l-[#C93C4B] border-y border-r border-[#0B2942] rounded-lg px-4 py-3 text-white flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#C93C4B]/20 border border-[#C93C4B]/50 flex items-center justify-center text-[#C93C4B] animate-pulse">
+            <AlertOctagon className="w-5 h-5" />
           </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono font-bold text-sm text-white tracking-wide">
+                SEVERE WEATHER BULLETIN
+              </span>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#C93C4B] text-white">
+                🔴 RED ALERT ACTIVE
+              </span>
+              <span className="text-[11px] font-mono text-cyan-300 flex items-center gap-1 font-bold">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>DATE: {currentDateFormatted} • {currentTimeFormatted}</span>
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-1">
+              Active Storm Track: <strong>Cyclone ASNA</strong> (988 hPa, 85 km/h winds, 4.8m waves) &amp; <strong>Bay of Bengal BOB-05</strong>. Complete fishing suspension in Arabian Sea &amp; North Bay.
+            </p>
+          </div>
+        </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {onOpenBulletin && (
-              <button
-                type="button"
-                onClick={() => onOpenBulletin(selectedRegionObj ? `${selectedRegionObj.harbors[0]} Harbor` : 'Kochi Fishing Harbor')}
-                className="flex items-center gap-2 bg-white text-rose-950 hover:bg-rose-50 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-              >
-                <Printer className="w-4 h-4 text-rose-700" />
-                <span>Print PDF {selectedRegionObj ? `(${selectedRegionObj.name.split(' ')[0]})` : 'Bulletin'}</span>
-              </button>
-            )}
-
+        <div className="flex items-center gap-2 text-xs font-mono">
+          {onNavigateToMap && (
             <button
               type="button"
-              onClick={() => {
-                alert(t('audioSirenBtn', 'Audio siren & NavIC coastal distress broadcast triggered for coastal stations!'));
-              }}
-              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              onClick={() => onNavigateToMap([9.15, 75.80], 'Cyclone ASNA Hazard Zone')}
+              className="px-3 py-1.5 rounded bg-[#0B2942] hover:bg-[#0D5C7A] text-white text-xs border border-[#0D5C7A] transition-colors flex items-center gap-1.5"
             >
-              <Volume2 className="w-4 h-4 text-rose-200" />
-              <span>{t('testAudioBroadcast', 'Test Siren Horn')}</span>
+              <MapPin className="w-3.5 h-3.5 text-cyan-300" />
+              <span>VIEW ON MAP</span>
             </button>
-          </div>
+          )}
+
+          {onAskOrca && (
+            <button
+              type="button"
+              onClick={() => onAskOrca('Evaluate active Cyclone ASNA, Kallakkadal swell surge, and port closure status')}
+              className="px-3 py-1.5 rounded bg-[#0F8B8D] hover:bg-[#0D5C7A] text-white text-xs font-bold border border-[#2EAFD0] transition-colors"
+            >
+              ASK ORCA
+            </button>
+          )}
+
+          {onOpenBulletin && (
+            <button
+              type="button"
+              onClick={() => onOpenBulletin('Kochi Fishing Harbor')}
+              className="px-3 py-1.5 rounded bg-[#071A2B] hover:bg-[#0B2942] text-slate-200 text-xs border border-slate-600 transition-colors"
+            >
+              OPEN BULLETIN
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Primary Section Navigation Tabs */}
-      <div className="flex items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex-wrap">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('bulletin')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'bulletin'
-                ? 'bg-rose-700 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>IMD Official Daily Marine Bulletin (24h Outlook)</span>
-            <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('alerts')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'alerts'
-                ? 'bg-ocean-deep text-white shadow-sm'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            <span>Active Coastal Hazard Notices ({filteredAlerts.length})</span>
-          </button>
-        </div>
-
+      {/* 2. TOP METRIC STATS TILES (TOTAL RED ALERTS & EMERGENCY OVERVIEW) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 font-mono text-xs">
+        {/* Red Alerts Count */}
         <button
           type="button"
-          onClick={handleRefreshImd}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+          onClick={() => {
+            setActiveTab('alerts');
+            setSeverityFilter('RED_ALERTS');
+          }}
+          className={`p-3 rounded-lg border text-left transition-all ${
+            severityFilter === 'RED_ALERTS'
+              ? 'bg-[#C93C4B] text-white border-[#C93C4B] ring-2 ring-red-400'
+              : 'bg-white hover:bg-red-50/50 border-[#D1DCE5] text-slate-900'
+          }`}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-ocean-teal' : ''}`} />
-          <span>{refreshing ? 'Syncing...' : 'Refresh Real IMD Feeds'}</span>
+          <div className="flex items-center justify-between">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${severityFilter === 'RED_ALERTS' ? 'text-white/80' : 'text-[#C93C4B]'}`}>
+              CRITICAL RED ALERTS
+            </span>
+            <AlertOctagon className={`w-4 h-4 ${severityFilter === 'RED_ALERTS' ? 'text-white' : 'text-[#C93C4B]'}`} />
+          </div>
+          <div className="text-2xl font-black mt-1">{redAlertCount} ACTIVE</div>
+          <span className={`text-[10px] mt-0.5 block ${severityFilter === 'RED_ALERTS' ? 'text-white/90' : 'text-slate-500'}`}>
+            Cyclones, Kallakkadal, Shoals, Tsunami
+          </span>
         </button>
+
+        {/* Caution Count */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('alerts');
+            setSeverityFilter('CAUTION');
+          }}
+          className={`p-3 rounded-lg border text-left transition-all ${
+            severityFilter === 'CAUTION'
+              ? 'bg-[#D89B24] text-slate-950 border-[#D89B24] ring-2 ring-amber-300'
+              : 'bg-white hover:bg-amber-50/50 border-[#D1DCE5] text-slate-900'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${severityFilter === 'CAUTION' ? 'text-slate-900 font-bold' : 'text-amber-600'}`}>
+              CAUTION &amp; WARNINGS
+            </span>
+            <AlertTriangle className={`w-4 h-4 ${severityFilter === 'CAUTION' ? 'text-slate-950' : 'text-amber-500'}`} />
+          </div>
+          <div className="text-2xl font-black mt-1">{cautionCount} NOTICES</div>
+          <span className={`text-[10px] mt-0.5 block ${severityFilter === 'CAUTION' ? 'text-slate-900' : 'text-slate-500'}`}>
+            Lightning, Rip Current, IMBL, Debris
+          </span>
+        </button>
+
+        {/* Advisories Count */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('alerts');
+            setSeverityFilter('ADVISORY');
+          }}
+          className={`p-3 rounded-lg border text-left transition-all ${
+            severityFilter === 'ADVISORY'
+              ? 'bg-[#1F9D72] text-white border-[#1F9D72] ring-2 ring-emerald-300'
+              : 'bg-white hover:bg-emerald-50/50 border-[#D1DCE5] text-slate-900'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${severityFilter === 'ADVISORY' ? 'text-white/80' : 'text-[#1F9D72]'}`}>
+              SAFE ADVISORIES
+            </span>
+            <CheckCircle2 className={`w-4 h-4 ${severityFilter === 'ADVISORY' ? 'text-white' : 'text-[#1F9D72]'}`} />
+          </div>
+          <div className="text-2xl font-black mt-1">{advisoryCount} ADVISORIES</div>
+          <span className={`text-[10px] mt-0.5 block ${severityFilter === 'ADVISORY' ? 'text-white/90' : 'text-slate-500'}`}>
+            PFZ Hotspots &amp; Safe Corridors
+          </span>
+        </button>
+
+        {/* Current Broadcast Date */}
+        <div className="p-3 rounded-lg border border-[#0B2942] bg-[#071A2B] text-white text-left">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider">
+              TELEMETRY DATE
+            </span>
+            <Calendar className="w-4 h-4 text-cyan-400" />
+          </div>
+          <div className="text-xl font-bold mt-1 text-white">{currentDateFormatted.toUpperCase()}</div>
+          <span className="text-[10px] text-slate-400 mt-0.5 block flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>{currentTimeFormatted} INCOIS/IMD Cycle</span>
+          </span>
+        </div>
       </div>
 
-      {/* REGION-WISE FILTER BAR (Applies across both Safety Alerts & Daily Bulletin) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs space-y-2">
-        <div className="flex items-center justify-between gap-2 px-1">
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-ocean-teal" />
-            <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-              Filter by Coastal Region / Maritime Sector:
-            </span>
-          </div>
-          {regionFilter !== 'ALL' && (
+      {/* 3. TABS & MULTI-CATEGORY FILTER BAR */}
+      <div className="bg-white border border-[#D1DCE5] rounded-lg p-3 space-y-2.5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Main Tabs */}
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setRegionFilter('ALL')}
-              className="text-xs text-ocean-teal hover:underline font-bold"
+              onClick={() => setActiveTab('alerts')}
+              className={`px-3.5 py-1.5 rounded font-mono text-xs font-bold transition-colors ${
+                activeTab === 'alerts'
+                  ? 'bg-[#071A2B] text-white shadow-xs'
+                  : 'bg-[#F4F7F8] text-slate-700 hover:bg-[#EAF0F3] border border-[#D1DCE5]'
+              }`}
             >
-              Reset to All India (12)
+              ALL ACTIVE HAZARDS ({filteredAlerts.length})
             </button>
-          )}
-        </div>
 
-        {/* Region Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setActiveTab('bulletin')}
+              className={`px-3.5 py-1.5 rounded font-mono text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                activeTab === 'bulletin'
+                  ? 'bg-[#071A2B] text-white shadow-xs'
+                  : 'bg-[#F4F7F8] text-slate-700 hover:bg-[#EAF0F3] border border-[#D1DCE5]'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-[#0D5C7A]" />
+              <span>OFFICIAL MARINE BULLETIN</span>
+            </button>
+          </div>
+
+          {/* Sync Button */}
           <button
             type="button"
-            onClick={() => setRegionFilter('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-              regionFilter === 'ALL'
-                ? 'bg-ocean-deep text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
+            onClick={handleRefreshImd}
+            disabled={refreshing}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono font-bold rounded bg-[#F4F7F8] hover:bg-[#EAF0F3] text-slate-700 border border-[#D1DCE5] transition-colors"
           >
-            🇮🇳 All India (12 Sectors)
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#0D5C7A]' : ''}`} />
+            <span>{refreshing ? 'SYNCING...' : 'SYNC IMD/INCOIS FEEDS'}</span>
           </button>
+        </div>
 
-          {REGIONAL_SECTORS.map(sec => {
-            const liveMatch = (imdData.regionalData || []).find(r => r.id === sec.id);
-            const isHigh = liveMatch?.riskLevel === 'HIGH' || sec.id === 'odisha' || sec.id === 'andhra' || sec.id === 'kerala';
-            const isSelected = regionFilter === sec.id;
-
-            return (
+        {/* Severity Quick Filters */}
+        {activeTab === 'alerts' && (
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 font-mono">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-slate-500 font-bold uppercase text-[10px] mr-1">SEVERITY:</span>
+              
               <button
-                key={sec.id}
                 type="button"
-                onClick={() => setRegionFilter(sec.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isSelected
-                    ? isHigh ? 'bg-rose-700 text-white shadow-sm font-bold' : 'bg-ocean-deep text-white shadow-sm font-bold'
-                    : isHigh
-                      ? 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                onClick={() => setSeverityFilter('RED_ALERTS')}
+                className={`px-3 py-1 rounded text-xs font-bold flex items-center gap-1 transition-all ${
+                  severityFilter === 'RED_ALERTS'
+                    ? 'bg-[#C93C4B] text-white shadow-sm ring-1 ring-red-400'
+                    : 'bg-red-50 text-[#C93C4B] hover:bg-red-100 border border-red-200'
                 }`}
               >
-                <span>{sec.state}</span>
-                {isHigh && (
-                  <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-rose-500'} animate-pulse`} />
-                )}
-                {liveMatch?.liveWaveHeight && (
-                  <span className={`text-[10px] font-mono ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
-                    {liveMatch.liveWaveHeight}m
-                  </span>
-                )}
+                <AlertOctagon className="w-3 h-3" />
+                <span>RED ALERTS ONLY ({redAlertCount})</span>
               </button>
-            );
-          })}
-        </div>
+
+              <button
+                type="button"
+                onClick={() => setSeverityFilter('ALL')}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
+                  severityFilter === 'ALL'
+                    ? 'bg-[#0B2942] text-white'
+                    : 'bg-[#F4F7F8] text-slate-700 hover:bg-[#EAF0F3] border border-[#D1DCE5]'
+                }`}
+              >
+                ALL HAZARDS ({MOCK_ALERTS.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSeverityFilter('CAUTION')}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
+                  severityFilter === 'CAUTION'
+                    ? 'bg-[#D89B24] text-slate-950 font-bold'
+                    : 'bg-[#F4F7F8] text-slate-700 hover:bg-[#EAF0F3] border border-[#D1DCE5]'
+                }`}
+              >
+                CAUTION ({cautionCount})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSeverityFilter('ADVISORY')}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
+                  severityFilter === 'ADVISORY'
+                    ? 'bg-[#1F9D72] text-white'
+                    : 'bg-[#F4F7F8] text-slate-700 hover:bg-[#EAF0F3] border border-[#D1DCE5]'
+                }`}
+              >
+                ADVISORIES ({advisoryCount})
+              </button>
+            </div>
+
+            {/* Region Filter Selector */}
+            <div className="flex items-center gap-1.5 text-xs font-mono">
+              <span className="text-slate-500 font-bold text-[10px] uppercase">SECTOR:</span>
+              <select
+                value={regionFilter}
+                onChange={(e) => setRegionFilter(e.target.value)}
+                className="bg-[#F4F7F8] border border-[#D1DCE5] rounded px-2 py-1 text-xs font-mono font-bold text-slate-800 focus:outline-none"
+              >
+                <option value="ALL">All Coastal Sectors (Pan-India)</option>
+                <option value="kerala">Kerala &amp; Lakshadweep</option>
+                <option value="odisha">Odisha &amp; Bay of Bengal</option>
+                <option value="andhra">Andhra Pradesh</option>
+                <option value="tamilnadu">Tamil Nadu &amp; Palk Bay</option>
+                <option value="karnataka">Karnataka &amp; Goa</option>
+                <option value="maharashtra">Maharashtra &amp; Mumbai</option>
+                <option value="andaman">Andaman &amp; Nicobar</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Hazard Category Filter Pills */}
+        {activeTab === 'alerts' && (
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
+            <span className="text-slate-500 font-bold uppercase text-[10px] mr-1">DANGER TYPE:</span>
+            {[
+              { id: 'ALL', label: 'All Types' },
+              { id: 'OCEAN_WEATHER', label: '🌊 Ocean Weather & Swell' },
+              { id: 'LIGHTNING', label: '⚡ Lightning & Squalls' },
+              { id: 'NAVIGATIONAL', label: '🪨 Shoals & Nav Hazards' },
+              { id: 'SECURITY', label: '🛡️ IMBL Security & Geofence' },
+              { id: 'SEISMIC', label: '🌊 Seismic & Tsunami' },
+              { id: 'PORT_CLOSURE', label: '🚩 Port Signal 10 / Closure' },
+              { id: 'ECOLOGICAL', label: '🧪 Red Tide & Algal Hypoxia' }
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCategoryFilter(cat.id)}
+                className={`px-2.5 py-1 rounded transition-colors ${
+                  categoryFilter === cat.id
+                    ? 'bg-[#0D5C7A] text-white font-bold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* VIEW 1: IMD OFFICIAL DAILY MARINE BULLETIN */}
-      {activeTab === 'bulletin' && (
-        <div className="space-y-5">
-          {/* If a specific region is filtered, show the Focused Regional Daily Bulletin */}
-          {regionFilter !== 'ALL' && selectedRegionObj && (
-            <div className="bg-white rounded-2xl border-2 border-ocean-teal/70 p-5 md:p-6 shadow-sm space-y-4 animate-in fade-in duration-200">
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-sky-50 text-ocean-deep flex items-center justify-center text-2xl font-bold">
-                    ⚓
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-ocean-light text-ocean-deep font-mono">
-                        {selectedRegionObj.basin} Basin
-                      </span>
-                      <span className="text-xs font-mono text-slate-500">
-                        OFFICIAL REGIONAL SAFETY BULLETIN
-                      </span>
+      {/* 4. MAIN WORKSPACE: ACTIVE HAZARDS (Vertical Alert Feed + Emergency Operations Panel) */}
+      {activeTab === 'alerts' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-[500px]">
+          {/* LEFT 8 COLS: Vertical Alert Cards */}
+          <div className="lg:col-span-8 space-y-3">
+            {filteredAlerts.length === 0 ? (
+              <div className="bg-white border border-[#D1DCE5] rounded-lg p-8 text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-[#1F9D72] mx-auto" />
+                <h3 className="font-mono font-bold text-sm text-slate-900 uppercase">NO ACTIVE HAZARDS IN THIS FILTER</h3>
+                <p className="text-xs text-slate-500">No matching meteorological or oceanographic warnings for the selected criteria.</p>
+              </div>
+            ) : (
+              filteredAlerts.map((alert) => {
+                const isHigh = alert.severity === 'HIGH' || alert.isRedAlert;
+                const isMed = alert.severity === 'MEDIUM';
+
+                return (
+                  <div
+                    key={alert.id}
+                    className={`bg-white border rounded-lg overflow-hidden shadow-xs space-y-0 transition-all ${
+                      isHigh
+                        ? 'border-[#C93C4B] ring-1 ring-red-400/40'
+                        : isMed
+                        ? 'border-[#D89B24]'
+                        : 'border-[#1F9D72]'
+                    }`}
+                  >
+                    {/* TOP STRIP: SEVERITY BADGE, CATEGORY & PROMINENT DATE/TIME */}
+                    <div className="bg-[#071A2B] text-white px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 border-b border-[#0B2942]">
+                      <div className="flex items-center gap-2">
+                        {isHigh ? (
+                          <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#C93C4B] text-white font-mono font-bold text-[11px] tracking-wide animate-pulse">
+                            <AlertOctagon className="w-3.5 h-3.5" />
+                            <span>CRITICAL RED ALERT</span>
+                          </span>
+                        ) : isMed ? (
+                          <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#D89B24] text-slate-950 font-mono font-bold text-[11px] tracking-wide">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>CAUTION ALERT</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#1F9D72] text-white font-mono font-bold text-[11px] tracking-wide">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>ADVISORY</span>
+                          </span>
+                        )}
+                        <span className="text-cyan-300 font-mono text-xs font-bold uppercase tracking-tight">
+                          [{alert.category}]
+                        </span>
+                      </div>
+
+                      {/* Prominent Broadcast Date & Time */}
+                      <div className="flex items-center gap-2 text-xs font-mono">
+                        <div className="flex items-center gap-1.5 bg-[#0B2942] border border-[#0D5C7A] px-2.5 py-0.5 rounded text-white font-bold">
+                          <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>DATE: {alert.dateTime || alert.date}</span>
+                        </div>
+                        <span className="text-slate-400 hidden sm:inline text-[11px]">
+                          EXPIRY: <strong className="text-amber-300">{alert.validUntil}</strong>
+                        </span>
+                      </div>
                     </div>
-                    <h2 className="text-lg md:text-xl font-black text-slate-900 mt-0.5">
-                      {selectedRegionObj.name}
-                    </h2>
+
+                    {/* CARD BODY */}
+                    <div className="p-4 space-y-3">
+                      {/* Authority & ID */}
+                      <div className="flex items-center justify-between text-xs border-b border-slate-100 pb-2">
+                        <span className="font-mono font-bold text-slate-700 uppercase text-[11px]">
+                          {alert.issuedBy}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                          ID: {alert.id}
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className={`font-bold text-sm leading-snug ${isHigh ? 'text-slate-900 font-mono' : 'text-slate-900'}`}>
+                        {alert.title}
+                      </h3>
+
+                      {/* Affected Regions */}
+                      <div className="text-[11px] font-mono text-[#0D5C7A] flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 shrink-0 text-[#C93C4B]" />
+                        <span>AFFECTED SECTORS: <strong>{alert.affectedRegions.join(' • ')}</strong></span>
+                      </div>
+
+                      {/* Warning Summary Narrative */}
+                      <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                        {alert.summary}
+                      </p>
+
+                      {/* Telemetry Chips (Wave, Wind, Danger Metrics) */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs">
+                        {alert.waveHeightMax && (
+                          <div className={`px-2.5 py-1 rounded border flex items-center gap-1.5 ${
+                            isHigh ? 'bg-red-50 border-red-200 text-[#C93C4B]' : 'bg-[#F4F7F8] border-[#D1DCE5] text-slate-800'
+                          }`}>
+                            <Waves className="w-3.5 h-3.5" />
+                            <span>WAVE: <strong>{alert.waveHeightMax}</strong></span>
+                          </div>
+                        )}
+
+                        {alert.windSpeedMax && (
+                          <div className="px-2.5 py-1 rounded bg-[#F4F7F8] border border-[#D1DCE5] text-slate-800 flex items-center gap-1.5">
+                            <Wind className="w-3.5 h-3.5 text-[#0D5C7A]" />
+                            <span>WIND: <strong>{alert.windSpeedMax}</strong></span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mandatory Directive Callout Box */}
+                      <div className={`p-2.5 rounded text-xs font-mono leading-relaxed border ${
+                        isHigh
+                          ? 'bg-[#C93C4B]/10 border-[#C93C4B]/40 text-[#C93C4B] font-bold'
+                          : 'bg-amber-50 border-amber-200 text-amber-900'
+                      }`}>
+                        <div className="flex items-start gap-1.5">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="uppercase tracking-wider">ACTION DIRECTIVE: </span>
+                            <span>{alert.actionRequired}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 font-mono text-xs">
+                        {onAskOrca && (
+                          <button
+                            type="button"
+                            onClick={() => onAskOrca({ zoneName: alert.affectedRegions[0], name: alert.title })}
+                            className="px-3 py-1.5 rounded bg-[#F4F7F8] hover:bg-[#EAF0F3] text-slate-800 font-bold border border-[#D1DCE5] transition-colors"
+                          >
+                            CONSULT ORCA AI
+                          </button>
+                        )}
+
+                        {onNavigateToMap && alert.coordinates && (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToMap(alert.coordinates, alert.title)}
+                            className="px-3.5 py-1.5 rounded bg-[#071A2B] hover:bg-[#0B2942] text-white font-bold border border-[#0D5C7A] transition-colors flex items-center gap-1.5"
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-cyan-300" />
+                            <span>VIEW ON MAP</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <RiskBadge level={selectedRegionLive?.riskLevel || 'MEDIUM'} score={selectedRegionLive?.riskScore || 50} size="lg" />
-                </div>
-              </div>
-
-              {/* Real-time ocean telemetry strip for this specific region */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1">
-                    <Waves className="w-3.5 h-3.5 text-sky-600" />
-                    <span>Live Wave Height</span>
-                  </span>
-                  <div className="text-base font-black text-slate-900 mt-1">
-                    {selectedRegionLive?.liveWaveHeight ? `${selectedRegionLive.liveWaveHeight} meters` : '1.4 meters'}
-                  </div>
-                  <div className="text-[10px] text-slate-500">Real-time Open-Meteo Buoy</div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1">
-                    <Compass className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Swell & Wave Period</span>
-                  </span>
-                  <div className="text-base font-black text-slate-900 mt-1">
-                    {selectedRegionLive?.liveSwellHeight ? `${selectedRegionLive.liveSwellHeight}m Swell` : '0.9m Swell'}
-                  </div>
-                  <div className="text-[10px] text-slate-500">
-                    Period: {selectedRegionLive?.livePeriodSec ? `${selectedRegionLive.livePeriodSec}s` : '8.2s'}
-                  </div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1">
-                    <Wind className="w-3.5 h-3.5 text-teal-600" />
-                    <span>Sustained Wind</span>
-                  </span>
-                  <div className="text-base font-black text-slate-900 mt-1">
-                    {selectedRegionObj.id === 'odisha' || selectedRegionObj.id === 'andhra' ? '45-55 km/h squall' : '15-20 knots'}
-                  </div>
-                  <div className="text-[10px] text-slate-500">IMD Synoptic Dispatch</div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1">
-                    <Anchor className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Monitored Ports</span>
-                  </span>
-                  <div className="text-xs font-bold text-slate-800 mt-1 truncate">
-                    {selectedRegionObj.harbors.join(', ')}
-                  </div>
-                  <div className="text-[10px] text-emerald-700 font-bold">VTS Radar Active</div>
-                </div>
-              </div>
-
-              {/* Status Notice & Directives for this sector */}
-              <div className={`p-4 rounded-xl border text-xs space-y-1.5 ${
-                selectedRegionLive?.riskLevel === 'HIGH'
-                  ? 'bg-rose-50 border-rose-300 text-rose-950 font-medium'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-950'
-              }`}>
-                <div className="flex items-center gap-2 font-bold text-sm">
-                  <AlertOctagon className="w-4 h-4 text-rose-600" />
-                  <span>Sector Status: {selectedRegionLive?.statusNotice || 'Normal Maritime State'}</span>
-                </div>
-                <p className="leading-relaxed">
-                  {selectedRegionObj.id === 'odisha' || selectedRegionObj.id === 'andhra'
-                    ? 'Total suspension of all fishing and recreational coastal voyages under active IMD Low Pressure Area advisory. All crafts advised to return to nearest shelter harbor immediately.'
-                    : selectedRegionObj.id === 'kerala' || selectedRegionObj.id === 'lakshadweep'
-                      ? 'High swell surge (Kallakkadal) warnings active. Avoid low-profile nearshore anchoring during high-tide phases.'
-                      : 'Sea conditions remain within safe limits for certified motorized crafts. Maintain NavIC transponder VHF listening on Channel 16.'}
-                </p>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                {onNavigateToMap && (
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToMap([selectedRegionObj.lat, selectedRegionObj.lon], selectedRegionObj.name)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-ocean-teal" />
-                    <span>Track {selectedRegionObj.state} on Marine Map</span>
-                  </button>
-                )}
-
-                {onOpenBulletin && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenBulletin(`${selectedRegionObj.harbors[0]} Harbor`)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-ocean-deep hover:bg-ocean-navy text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-ocean-cyan" />
-                    <span>Print Official {selectedRegionObj.state} Daily Bulletin PDF</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* North Indian Ocean Tropical Weather Outlook Box */}
-          <div className="bg-white rounded-2xl border-2 border-rose-300 p-5 md:p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xl">
-                  🌀
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-mono">
-                      {outlook.cycloneStatus}
-                    </span>
-                    <span className="text-[11px] font-mono text-slate-500">
-                      RSMC NEW DELHI • BULLETIN #TROP-2026
-                    </span>
-                  </div>
-                  <h2 className="text-base md:text-lg font-bold text-slate-900 mt-0.5">
-                    {outlook.title}
-                  </h2>
-                </div>
-              </div>
-
-              <div className="text-right text-xs">
-                <div className="font-bold text-slate-900 font-mono">{outlook.validPeriod}</div>
-                <div className="text-rose-600 font-bold text-[11px]">Probability: {outlook.cyclogenesisProbability24h}</div>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-rose-50/70 border border-rose-200 space-y-2">
-              <div className="font-bold text-xs uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
-                <AlertOctagon className="w-4 h-4 text-rose-600" />
-                <span>Impacted Maritime Sector: {outlook.impactedRegion}</span>
-              </div>
-              <p className="text-xs sm:text-sm text-rose-950 leading-relaxed font-sans">
-                {outlook.summary}
-              </p>
-            </div>
-
-            {/* Mandatory Directive */}
-            <div className="p-3.5 rounded-xl bg-rose-700 text-white text-xs space-y-1">
-              <span className="font-bold uppercase tracking-wider text-[11px] flex items-center gap-1 text-rose-200">
-                <Radio className="w-4 h-4" />
-                <span>Mandatory Fishermen Sea Venturing Directive:</span>
-              </span>
-              <p className="text-rose-50 leading-relaxed font-medium">
-                {outlook.fishermenWarning}
-              </p>
-            </div>
-
-            {/* Live Marine Telemetry Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Squall & Gale Wind</span>
-                <span className="text-sm font-extrabold text-slate-900 block mt-0.5">{outlook.windSquallKnots}</span>
-                <span className="text-[10px] text-slate-500">Squalls up to 35 knots</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Live Waves (Open-Meteo)</span>
-                <span className="text-sm font-extrabold text-slate-900 block mt-0.5">
-                  {telemetry.waveHeight ? `${telemetry.waveHeight}m` : '1.8m'} (Rough)
-                </span>
-                <span className="text-[10px] text-slate-500">
-                  Swell: {telemetry.swellHeight ? `${telemetry.swellHeight}m` : '1.2m'} • {telemetry.wavePeriodSec ? `${telemetry.wavePeriodSec}s` : '8.4s'}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Trajectory Vector</span>
-                <span className="text-sm font-extrabold text-slate-900 block mt-0.5">WNW Movement</span>
-                <span className="text-[10px] text-slate-500">Across Odisha & North AP</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Sea State Index</span>
-                <span className="text-sm font-extrabold text-rose-700 block mt-0.5">{outlook.seaState}</span>
-                <span className="text-[10px] text-slate-500">State: 5-6 (WMO Code)</span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              {onNavigateToMap && (
-                <button
-                  type="button"
-                  onClick={() => onNavigateToMap([18.5, 84.8], 'IMD Low Pressure Danger Zone')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <MapPin className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Pin Low-Pressure Zone on Map [18.50°N, 84.80°E]</span>
-                </button>
-              )}
-
-              {onAskOrca && (
-                <button
-                  type="button"
-                  onClick={() => onAskOrca('Provide complete safety contingency and harbor return protocol for the active Bay of Bengal low pressure area')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ocean-deep hover:bg-ocean-navy text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-ocean-cyan" />
-                  <span>Ask AI for Vessel Contingency</span>
-                </button>
-              )}
-            </div>
+                );
+              })
+            )}
           </div>
 
-          {/* Bay of Bengal Synoptic & Sub-Area Bulletins (ACWC Kolkata) */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-ocean-teal">Official Coastal Sea Area Bulletin</span>
-                <h3 className="text-base font-bold text-slate-900">{bob.agency}</h3>
-                <span className="text-xs text-slate-500">{bob.validity}</span>
+          {/* RIGHT 4 COLS: Emergency Operations Center (EOC) Command Panel */}
+          <div className="lg:col-span-4 space-y-3">
+            {/* Operational Actions Box */}
+            <div className="bg-white border border-[#D1DCE5] rounded-lg p-3.5 space-y-3 shadow-xs">
+              <div className="pb-2 border-b border-[#D1DCE5] flex items-center justify-between">
+                <span className="font-mono font-bold text-xs text-slate-900 uppercase tracking-wide">
+                  EMERGENCY OPERATIONS (EOC)
+                </span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#C93C4B] animate-pulse" />
               </div>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-sky-100 text-sky-800 font-bold font-mono">
-                Bay of Bengal Maritime Basin
-              </span>
-            </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-              <span className="font-bold text-slate-700 block uppercase tracking-wider text-[10px]">
-                Synoptic Situation (Meteorologist Dispatch):
-              </span>
-              <p className="text-slate-800 leading-relaxed font-mono text-[11px]">
-                {bob.synopticSituation}
-              </p>
-            </div>
+              <div className="space-y-2 font-mono text-xs">
+                {/* 1. Suspend Departure */}
+                <button
+                  type="button"
+                  onClick={() => setDepartureSuspended(!departureSuspended)}
+                  className={`w-full p-2.5 rounded-lg text-left transition-colors flex items-center justify-between border ${
+                    departureSuspended
+                      ? 'bg-[#C93C4B] text-white border-[#C93C4B]'
+                      : 'bg-[#F4F7F8] hover:bg-[#EAF0F3] text-slate-800 border-[#D1DCE5]'
+                  }`}
+                >
+                  <div>
+                    <div className="font-bold text-xs">SUSPEND DEPARTURE</div>
+                    <div className={`text-[10px] ${departureSuspended ? 'text-white/80' : 'text-slate-500'}`}>
+                      {departureSuspended ? 'HARBOR GATE CLOSED' : 'Harbor Master Flag Signal 10'}
+                    </div>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                    departureSuspended ? 'bg-white text-[#C93C4B]' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {departureSuspended ? 'ACTIVE' : 'STANDBY'}
+                  </span>
+                </button>
 
-            {/* Sub-sectors table */}
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 text-[10px] font-bold uppercase text-slate-600 border-b border-slate-200">
-                  <tr>
-                    <th className="p-2.5">Sea Sector</th>
-                    <th className="p-2.5">Sustained Wind</th>
-                    <th className="p-2.5">Weather & Precipitation</th>
-                    <th className="p-2.5">Visibility</th>
-                    <th className="p-2.5">Sea State</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {bob.sectors.map((sec, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold text-slate-900">{sec.name}</td>
-                      <td className="p-2.5 font-mono text-ocean-deep font-semibold">{sec.wind}</td>
-                      <td className="p-2.5 text-slate-700">{sec.weather}</td>
-                      <td className="p-2.5 text-slate-600">{sec.visibility}</td>
-                      <td className="p-2.5 font-semibold text-rose-700">{sec.sea}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                {/* 2. Notify Vessels */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBroadcastSent(true);
+                    setTimeout(() => setBroadcastSent(false), 3000);
+                  }}
+                  className="w-full p-2.5 rounded-lg text-left bg-[#F4F7F8] hover:bg-[#EAF0F3] text-slate-800 border border-[#D1DCE5] transition-colors flex items-center justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-xs">BROADCAST TO FLEET</div>
+                    <div className="text-[10px] text-slate-500">
+                      {broadcastSent ? 'NAVIC S-BAND DISPATCH TRANSMITTED' : 'VHF Ch 16 / NavIC Broadcast'}
+                    </div>
+                  </div>
+                  {broadcastSent ? (
+                    <Check className="w-4 h-4 text-[#1F9D72]" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5 text-[#0D5C7A]" />
+                  )}
+                </button>
 
-          {/* Arabian Sea Synoptic & Sub-Area Bulletins (ACWC Mumbai) */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-ocean-teal">Official Coastal Sea Area Bulletin</span>
-                <h3 className="text-base font-bold text-slate-900">{as.agency}</h3>
-                <span className="text-xs text-slate-500">{as.validity}</span>
+                {/* 3. Open Harbor Shelter */}
+                <div className="p-2.5 rounded-lg bg-[#F4F7F8] border border-[#D1DCE5] space-y-1">
+                  <div className="font-bold text-slate-900 text-xs flex items-center justify-between">
+                    <span>HARBOR STORM BERTHS</span>
+                    <span className="text-[10px] text-[#1F9D72] font-bold">READY</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-sans leading-snug">
+                    Inner Basin Kochi, Paradip, &amp; Mangalore wharfs cleared for craft berthing. Free storm mooring permitted.
+                  </p>
+                </div>
+
+                {/* 4. View Safe Routes */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.hash = 'routes';
+                  }}
+                  className="w-full p-2.5 rounded-lg bg-[#071A2B] hover:bg-[#0B2942] text-white border border-[#0D5C7A] transition-colors flex items-center justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-xs">VIEW SAFE DETOUR ROUTES</div>
+                    <div className="text-[10px] text-slate-400">Hydrodynamic avoidance corridors</div>
+                  </div>
+                  <Navigation className="w-3.5 h-3.5 text-cyan-300" />
+                </button>
               </div>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 font-bold font-mono">
-                Arabian Sea Maritime Basin
-              </span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-              <span className="font-bold text-slate-700 block uppercase tracking-wider text-[10px]">
-                Synoptic Situation (ACWC Mumbai):
-              </span>
-              <p className="text-slate-800 leading-relaxed font-mono text-[11px]">
-                {as.synopticSituation}
-              </p>
-            </div>
+            {/* Watch Stand Live Console */}
+            <div className="bg-[#071A2B] border border-[#0B2942] rounded-lg p-3 text-white font-mono text-xs space-y-2">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wide border-b border-[#0B2942] pb-1.5 flex items-center justify-between">
+                <span>EOC WATCH STAND</span>
+                <span className="text-[#1F9D72] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>LIVE MONITORING</span>
+                </span>
+              </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 text-[10px] font-bold uppercase text-slate-600 border-b border-slate-200">
-                  <tr>
-                    <th className="p-2.5">Sea Sector</th>
-                    <th className="p-2.5">Sustained Wind</th>
-                    <th className="p-2.5">Weather</th>
-                    <th className="p-2.5">Visibility</th>
-                    <th className="p-2.5">Sea State</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {as.sectors.map((sec, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold text-slate-900">{sec.name}</td>
-                      <td className="p-2.5 font-mono text-ocean-deep">{sec.wind}</td>
-                      <td className="p-2.5 text-slate-700">{sec.weather}</td>
-                      <td className="p-2.5 text-slate-600">{sec.visibility}</td>
-                      <td className="p-2.5 font-semibold text-emerald-700">{sec.sea}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">COMMAND DUTY:</span>
+                  <span className="font-bold text-slate-200">INCOIS-CG-S04</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">VHF DISTRESS:</span>
+                  <span className="font-bold text-cyan-300">156.800 MHz (CH 16)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">NAVIC S-BAND:</span>
+                  <span className="font-bold text-[#1F9D72]">100% OPERATIONAL</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">DATE LOCK:</span>
+                  <span className="font-bold text-amber-300">{currentDateFormatted}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* VIEW 2: ACTIVE COASTAL HAZARD NOTICES LIST */}
-      {activeTab === 'alerts' && (
-        <div className="space-y-4">
-          {/* Severity Filter Tabs */}
-          <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">{t('filterSeverity', 'Filter Severity')}:</span>
-              <div className="flex items-center gap-1.5">
-                {['ALL', 'HIGH', 'MEDIUM', 'LOW'].map(sev => (
-                  <button
-                    key={sev}
-                    onClick={() => setSeverityFilter(sev)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                      severityFilter === sev
-                        ? sev === 'HIGH' ? 'bg-rose-700 text-white' :
-                          sev === 'MEDIUM' ? 'bg-amber-600 text-white' :
-                          sev === 'LOW' ? 'bg-emerald-700 text-white' :
-                          'bg-ocean-deep text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {sev === 'ALL' ? t('allAlerts', 'All Alerts') : 
-                     sev === 'HIGH' ? t('severeRed', 'Severe Red') : 
-                     sev === 'MEDIUM' ? t('moderateCaution', 'Moderate Caution') : 
-                     t('advisories', 'Advisories')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium mr-2">
-              {regionFilter !== 'ALL' && (
-                <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-bold">
-                  Region: {selectedRegionObj ? selectedRegionObj.state : regionFilter}
+      {/* VIEW 2: OFFICIAL MARINE BULLETIN TAB */}
+      {activeTab === 'bulletin' && (
+        <div className="space-y-3 font-sans">
+          <div className="bg-white border border-[#D1DCE5] rounded-lg p-4 space-y-3 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#D1DCE5]">
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-xs text-slate-900 uppercase">
+                  RSMC NEW DELHI • NORTH INDIAN OCEAN TROPICAL WEATHER OUTLOOK
                 </span>
-              )}
-              <span>{filteredAlerts.length} {t('noticesCount', 'Notices')}</span>
-            </div>
-          </div>
-
-          {/* Empty state if no alerts match region */}
-          {filteredAlerts.length === 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3 shadow-xs">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#C93C4B]/10 text-[#C93C4B] border border-[#C93C4B]/30 font-bold">
+                  {outlook.cycloneStatus}
+                </span>
               </div>
-              <h3 className="text-base font-bold text-slate-900">
-                No Active Emergency Notices for {selectedRegionObj ? selectedRegionObj.name : 'this Region'}
-              </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                Marine meteorological parameters and NavIC boundary sensors indicate clear operations. Standard port fairway regulations apply.
-              </p>
-              <button
-                type="button"
-                onClick={() => setRegionFilter('ALL')}
-                className="px-4 py-2 rounded-xl bg-ocean-deep text-white text-xs font-bold hover:bg-ocean-navy transition-colors cursor-pointer"
-              >
-                View All National Alerts
-              </button>
+              <span className="text-xs font-mono font-bold text-cyan-800 bg-cyan-50 px-2.5 py-0.5 rounded border border-cyan-200">
+                DATE: {currentDateFormatted} • VALID: {outlook.validPeriod}
+              </span>
             </div>
-          )}
 
-          {/* Alerts Feed */}
-          <div className="space-y-4">
-            {filteredAlerts.map(alert => {
-              const isHigh = alert.severity === 'HIGH';
-              const isMed = alert.severity === 'MEDIUM';
+            <p className="text-xs text-slate-700 leading-relaxed font-mono bg-slate-50 p-3 rounded border border-slate-200 whitespace-pre-line">
+              {outlook.cycloneNarrative}
+            </p>
 
-              return (
-                <div
-                  key={alert.id}
-                  className={`bg-white rounded-2xl border p-5 shadow-sm transition-all ${
-                    alert.isRealImdData ? 'border-rose-400 bg-rose-50/30 ring-2 ring-rose-300' :
-                    isHigh ? 'border-rose-300 bg-rose-50/20 ring-1 ring-rose-200' :
-                    isMed ? 'border-amber-300 bg-amber-50/20' : 'border-slate-200'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-slate-100">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2.5 rounded-xl shrink-0 ${
-                        isHigh ? 'bg-rose-100 text-rose-700' :
-                        isMed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {isHigh ? <AlertOctagon className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            {t(alert.category)}
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            ID: {alert.id}
-                          </span>
-                          {alert.isRealImdData && (
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-600 text-white font-mono animate-pulse">
-                              ● REAL-TIME IMD 24H OUTLOOK
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="font-bold text-base text-slate-900 leading-snug mt-0.5">
-                          {t(alert.title)}
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {t('issuedBy', 'Issued by')}: <strong>{alert.issuedBy}</strong> • {alert.timestamp}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <RiskBadge level={alert.severity} size="md" />
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="mt-3 space-y-3">
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      {t(alert.summary)}
-                    </p>
-
-                    {/* Directive */}
-                    <div className={`p-3 rounded-xl border text-xs leading-relaxed flex items-start gap-2 ${
-                      isHigh ? 'bg-rose-100/70 border-rose-200 text-rose-950 font-medium' :
-                      isMed ? 'bg-amber-100/70 border-amber-200 text-amber-950' :
-                      'bg-emerald-50 border-emerald-200 text-emerald-950'
-                    }`}>
-                      <Radio className="w-4 h-4 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-bold uppercase tracking-wider">{t('officialDirectives', 'Mandatory Maritime Directive')}: </span>
-                        <span>{t(alert.actionRequired)}</span>
-                      </div>
-                    </div>
-
-                    {/* Regions and Telemetry Pill */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-slate-600">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-500">{t('effectiveRange', 'Affected Sectors')}:</span>
-                        <span className="font-medium text-slate-800">{alert.affectedRegions.join(', ')}</span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        {alert.waveHeightMax && (
-                          <span className="bg-slate-100 px-2.5 py-1 rounded-lg font-mono">
-                            {t('waveHeight', 'Waves')}: <strong>{alert.waveHeightMax}</strong>
-                          </span>
-                        )}
-                        {alert.windSpeedMax && (
-                          <span className="bg-slate-100 px-2.5 py-1 rounded-lg font-mono">
-                            {t('windSpeed', 'Wind')}: <strong>{alert.windSpeedMax}</strong>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
-                    {alert.isRealImdData && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('bulletin')}
-                        className="py-1.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
-                      >
-                        Read Official IMD Bulletin & Outlook
-                      </button>
-                    )}
-
-                    {onAskOrca && (
-                      <button
-                        type="button"
-                        onClick={() => onAskOrca({ zoneName: alert.affectedRegions[0], name: alert.title })}
-                        className="py-1.5 px-3 rounded-xl bg-ocean-deep hover:bg-ocean-navy text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                      >
-                        {t('askOrcaSafety', 'Consult ORCA on Safety Contingency')}
-                      </button>
-                    )}
-
-                    {onNavigateToMap && alert.coordinates && (
-                      <button
-                        type="button"
-                        onClick={() => onNavigateToMap(alert.coordinates, alert.title)}
-                        className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
-                      >
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>{t('viewDangerCone', 'View Danger Zone on Map')}</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              <div className="p-3 rounded-lg border border-slate-200 bg-[#F8FAFC]">
+                <h4 className="font-mono font-bold text-xs text-[#0D5C7A] mb-1">BAY OF BENGAL OUTLOOK</h4>
+                <p className="text-xs text-slate-700 font-sans leading-relaxed">{bob.cycloneStatus}: {bob.advisory}</p>
+                <div className="mt-2 text-[10px] font-mono text-slate-500">WIND: {bob.wind} • WAVES: {bob.waves}</div>
+              </div>
+              <div className="p-3 rounded-lg border border-slate-200 bg-[#F8FAFC]">
+                <h4 className="font-mono font-bold text-xs text-[#0D5C7A] mb-1">ARABIAN SEA OUTLOOK</h4>
+                <p className="text-xs text-slate-700 font-sans leading-relaxed">{as.cycloneStatus}: {as.advisory}</p>
+                <div className="mt-2 text-[10px] font-mono text-slate-500">WIND: {as.wind} • WAVES: {as.waves}</div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertOctagon, AlertTriangle, X, ChevronRight, Volume2 } from 'lucide-react';
+import { AlertOctagon, AlertTriangle, X, ChevronRight, Volume2, Calendar } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 export function AlertBanner({ alert, onNavigateToAlerts = null }) {
@@ -29,6 +29,10 @@ export function AlertBanner({ alert, onNavigateToAlerts = null }) {
           )}
           <span className="font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/25 text-[10px] shrink-0">
             {alert.severity} {t('alertLabel', 'ALERT')}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-black/40 text-[10px] font-mono shrink-0 flex items-center gap-1 font-bold text-amber-200 border border-white/20">
+            <Calendar className="w-3 h-3 text-cyan-300" />
+            <span>{alert.dateTime || alert.date || (new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' • 17:30 IST')}</span>
           </span>
           <p className="truncate font-medium">
             <span className="font-bold">{t(alert.title)}</span> — {t(alert.summary)}

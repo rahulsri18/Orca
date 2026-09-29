@@ -8,6 +8,50 @@ export const HARBORS = [
 ];
 
 export const MOCK_ROUTES = {
+  'KOC-MNG': {
+    origin: 'Kochi',
+    destination: 'Mangalore',
+    directRoute: {
+      distanceNm: 58.4,
+      estimatedHours: 4.8,
+      maxWaveHeight: 4.2,
+      riskLevel: 'HIGH',
+      riskScore: 88,
+      riskWarning: 'Crosses active 4.2m breaking swell zone off submerged rocky shoals and severe coastal squall front.',
+      waypoints: [
+        [9.9312, 76.2673],
+        [10.80, 75.80],
+        [11.90, 75.30],
+        [12.914, 74.856]
+      ],
+      segments: [
+        { from: 'Kochi Departure', to: 'Ponnani Shoals', risk: 'HIGH', wave: '3.8m' },
+        { from: 'Ponnani Shoals', to: 'Kozhikode Outer', risk: 'HIGH', wave: '4.2m' },
+        { from: 'Kozhikode Outer', to: 'Mangalore Fairway', risk: 'HIGH', wave: '3.6m' }
+      ]
+    },
+    safeRoute: {
+      distanceNm: 62.8,
+      estimatedHours: 5.1,
+      maxWaveHeight: 1.4,
+      riskLevel: 'LOW',
+      riskScore: 22,
+      safetyBonus: 'Shifts heading 15° West into deep water (42m depth), circumventing breaking swell and saving 18% fuel with favorable southbound drift.',
+      waypoints: [
+        [9.9312, 76.2673],
+        [10.20, 75.80],
+        [11.20, 75.10],
+        [12.10, 74.50],
+        [12.75, 74.60],
+        [12.914, 74.856]
+      ],
+      segments: [
+        { from: 'Kochi Channel', to: 'Deep Water WP-1', risk: 'LOW', wave: '1.2m' },
+        { from: 'Deep Water WP-1', to: 'Offshore WP-2', risk: 'LOW', wave: '1.4m' },
+        { from: 'Offshore WP-2', to: 'Mangalore Approach', risk: 'LOW', wave: '1.1m' }
+      ]
+    }
+  },
   'MNG-KRW': {
     origin: 'New Mangalore / Malpe',
     destination: 'Karwar Harbor',

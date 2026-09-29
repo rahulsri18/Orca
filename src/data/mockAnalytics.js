@@ -36,16 +36,17 @@ export const TIDE_PREDICTION = [
 ];
 
 export const HISTORICAL_MONTHLY_SUMMARY = [
-  { month: 'Jan', avgWave: 1.1, cyclonicEvents: 0, catchIndex: 82 },
-  { month: 'Feb', avgWave: 1.0, cyclonicEvents: 0, catchIndex: 88 },
-  { month: 'Mar', avgWave: 1.2, cyclonicEvents: 0, catchIndex: 84 },
-  { month: 'Apr', avgWave: 1.5, cyclonicEvents: 1, catchIndex: 76 },
-  { month: 'May', avgWave: 2.2, cyclonicEvents: 2, catchIndex: 65 },
-  { month: 'Jun', avgWave: 3.6, cyclonicEvents: 3, catchIndex: 40 },
-  { month: 'Jul', avgWave: 3.8, cyclonicEvents: 3, catchIndex: 35 },
-  { month: 'Aug', avgWave: 3.4, cyclonicEvents: 2, catchIndex: 48 },
-  { month: 'Sep', avgWave: 2.4, cyclonicEvents: 1, catchIndex: 72 },
-  { month: 'Oct', avgWave: 1.8, cyclonicEvents: 2, catchIndex: 79 },
-  { month: 'Nov', avgWave: 1.6, cyclonicEvents: 2, catchIndex: 81 },
-  { month: 'Dec', avgWave: 1.3, cyclonicEvents: 0, catchIndex: 85 },
+  { month: 'January', sst: '27.4°C', wave: '1.1 m', wind: '12 kt', galeRisk: 'LOW', season: 'Northeast Monsoon', anomaly: '-0.2°C' },
+  { month: 'February', sst: '27.8°C', wave: '1.0 m', wind: '10 kt', galeRisk: 'LOW', season: 'Fair Weather Inter-monsoon', anomaly: '0.0°C' },
+  { month: 'March', sst: '28.5°C', wave: '1.2 m', wind: '11 kt', galeRisk: 'LOW', season: 'Pre-Monsoon Transition', anomaly: '+0.3°C' },
+  { month: 'April', sst: '29.4°C', wave: '1.5 m', wind: '14 kt', galeRisk: 'CAUTION', season: 'Pre-Monsoon Warming', anomaly: '+0.7°C' },
+  { month: 'May', sst: '29.9°C', wave: '2.4 m', wind: '22 kt', galeRisk: 'HIGH', season: 'Pre-Monsoon Squall Phase', anomaly: '+1.1°C' },
+  { month: 'June', sst: '28.6°C', wave: '3.6 m', wind: '32 kt', galeRisk: 'HIGH', season: 'Southwest Monsoon (Active)', anomaly: '+0.4°C' },
+  { month: 'July', sst: '27.8°C', wave: '3.8 m', wind: '34 kt', galeRisk: 'HIGH', season: 'Southwest Monsoon (Peak)', anomaly: '+0.2°C' },
+  { month: 'August', sst: '27.5°C', wave: '3.4 m', wind: '30 kt', galeRisk: 'HIGH', season: 'Southwest Monsoon (Late)', anomaly: '+0.1°C' },
+  { month: 'September', sst: '28.1°C', wave: '2.4 m', wind: '18 kt', galeRisk: 'CAUTION', season: 'Monsoon Withdrawal', anomaly: '+0.5°C' },
+  { month: 'October', sst: '28.9°C', wave: '1.8 m', wind: '16 kt', galeRisk: 'CAUTION', season: 'Post-Monsoon Cyclone Season', anomaly: '+0.8°C' },
+  { month: 'November', sst: '28.6°C', wave: '1.5 m', wind: '14 kt', galeRisk: 'CAUTION', season: 'Post-Monsoon Tropical Phase', anomaly: '+0.4°C' },
+  { month: 'December', sst: '27.9°C', wave: '1.2 m', wind: '13 kt', galeRisk: 'LOW', season: 'Northeast Monsoon Initiation', anomaly: '-0.1°C' },
 ];
+

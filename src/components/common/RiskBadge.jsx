@@ -1,57 +1,64 @@
 import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import { ShieldCheck, AlertTriangle, AlertOctagon } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, AlertOctagon, Flame } from 'lucide-react';
 
 export function RiskBadge({ level = 'LOW', score = null, size = 'md', className = '' }) {
   const { t } = useLanguage();
   const norm = String(level).toUpperCase();
+  
+  const isCritical = norm === 'CRITICAL' || norm === 'EXTREME';
   const isHigh = norm === 'HIGH' || norm === 'DANGER' || norm === 'SEVERE';
-  const isMedium = norm === 'MEDIUM' || norm === 'CAUTION' || norm === 'MODERATE';
+  const isCaution = norm === 'MEDIUM' || norm === 'CAUTION' || norm === 'MODERATE' || norm === 'WARNING';
 
   let config = {
-    bg: 'bg-emerald-50 border-emerald-300 text-emerald-800',
-    dot: 'bg-emerald-600',
+    bg: 'bg-[#E8F6F1] border-[#A8DFC9] text-[#177F5B]',
+    dot: 'bg-[#1F9D72]',
     icon: ShieldCheck,
     labelKey: 'safeLowRisk',
-    fallback: 'SAFE / LOW RISK'
+    fallback: 'SAFE'
   };
 
-  if (isHigh) {
+  if (isCritical) {
     config = {
-      bg: 'bg-rose-50 border-rose-300 text-rose-800',
-      dot: 'bg-rose-600 animate-ping',
+      bg: 'bg-[#FBECEE] border-[#F2ADB6] text-[#C93C4B]',
+      dot: 'bg-[#C93C4B]',
+      icon: Flame,
+      labelKey: 'criticalDanger',
+      fallback: 'CRITICAL DANGER'
+    };
+  } else if (isHigh) {
+    config = {
+      bg: 'bg-[#FCEFE9] border-[#F6C2AB] text-[#BD5022]',
+      dot: 'bg-[#D96B3B]',
       icon: AlertOctagon,
       labelKey: 'highRiskDanger',
-      fallback: 'HIGH RISK / DANGER'
+      fallback: 'HIGH RISK'
     };
-  } else if (isMedium) {
+  } else if (isCaution) {
     config = {
-      bg: 'bg-amber-50 border-amber-300 text-amber-800',
-      dot: 'bg-amber-500',
+      bg: 'bg-[#FBF5E8] border-[#F2D69E] text-[#9E6E10]',
+      dot: 'bg-[#D89B24]',
       icon: AlertTriangle,
       labelKey: 'moderateCaution',
-      fallback: 'MODERATE CAUTION'
+      fallback: 'CAUTION'
     };
   }
 
   const sizeClasses = {
-    sm: 'text-xs px-2 py-0.5 gap-1.5',
-    md: 'text-xs md:text-sm px-3 py-1 gap-2 font-medium',
-    lg: 'text-sm md:text-base px-4 py-1.5 gap-2.5 font-semibold'
+    sm: 'text-[10px] px-1.5 py-0.5 gap-1 font-mono font-semibold',
+    md: 'text-xs px-2.5 py-1 gap-1.5 font-medium',
+    lg: 'text-sm px-3.5 py-1.5 gap-2 font-semibold'
   };
 
   const Icon = config.icon;
 
   return (
-    <span className={`inline-flex items-center rounded-full border shadow-sm ${config.bg} ${sizeClasses[size]} ${className}`}>
-      <span className="relative flex h-2 w-2">
-        {isHigh && <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${config.dot}`} />}
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${isHigh ? 'bg-rose-600' : isMedium ? 'bg-amber-500' : 'bg-emerald-600'}`} />
-      </span>
-      <Icon className={size === 'sm' ? 'w-3.5 h-3.5' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'} />
-      <span>{t(config.labelKey, config.fallback)}</span>
+    <span className={`inline-flex items-center rounded border tracking-tight ${config.bg} ${sizeClasses[size]} ${className}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${config.dot}`} />
+      <Icon className={size === 'sm' ? 'w-3 h-3' : size === 'lg' ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
+      <span className="uppercase font-bold tracking-wider">{t(config.labelKey, config.fallback)}</span>
       {score !== null && (
-        <span className="ml-1 px-1.5 py-0.2 bg-white/70 rounded-md font-mono text-xs border border-current/20">
+        <span className="ml-1 px-1 py-0.2 bg-white/80 rounded font-mono text-[11px] font-bold border border-current/20">
           {score}/100
         </span>
       )}

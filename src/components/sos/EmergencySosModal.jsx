@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  EMERGENCY_TYPES,
   SURVIVAL_PROTOCOLS,
   getOfflineGpsPosition,
   findNearestRefugePort,
@@ -13,7 +12,7 @@ import { startEmergencySosSiren, stopEmergencySosSiren } from '../../lib/audioSe
 import { useConnectivity } from '../../context/ConnectivityContext';
 import { useLanguage } from '../../context/LanguageContext';
 import {
-  AlertOctagon,
+  AlertTriangle,
   Radio,
   Volume2,
   VolumeX,
@@ -23,27 +22,70 @@ import {
   Compass,
   MapPin,
   LifeBuoy,
-  ChevronDown,
-  ChevronUp,
   X,
   CheckCircle2,
   Send,
   RefreshCw,
   Users,
   Ship,
-  FileText
+  ShieldAlert,
+  ChevronRight
 } from 'lucide-react';
 import { getStoredUserProfile } from '../../services/profileService';
+
+const CONSOLE_EMERGENCY_TYPES = [
+  {
+    id: 'CAPSIZING',
+    title: 'CAPSIZING',
+    subtitle: 'Hull breach / flooding / sinking',
+    urgency: 'CRITICAL (MAYDAY)',
+    code: 'MAYDAY-CAP'
+  },
+  {
+    id: 'ENGINE_FAILURE',
+    title: 'ENGINE FAILURE',
+    subtitle: 'Dead in water / drifting toward breakers',
+    urgency: 'URGENT (PAN-PAN)',
+    code: 'PAN-ENG'
+  },
+  {
+    id: 'MEDICAL',
+    title: 'MEDICAL',
+    subtitle: 'Critical crew trauma / MEDEVAC needed',
+    urgency: 'CRITICAL (MEDEVAC)',
+    code: 'MED-EVAC'
+  },
+  {
+    id: 'SEVERE_SQUALL',
+    title: 'SEVERE SQUALL',
+    subtitle: 'Gale wind >35 kt / waves >3.5m / trapped',
+    urgency: 'CRITICAL (MAYDAY)',
+    code: 'MAYDAY-WX'
+  },
+  {
+    id: 'COLLISION',
+    title: 'COLLISION',
+    subtitle: 'Vessel impact / structural breach / fire',
+    urgency: 'CRITICAL (MAYDAY)',
+    code: 'MAYDAY-COL'
+  },
+  {
+    id: 'MAN_OVERBOARD',
+    title: 'MAN OVERBOARD',
+    subtitle: 'Crew fallen into sea / active drift',
+    urgency: 'CRITICAL (MOB)',
+    code: 'MAYDAY-MOB'
+  }
+];
 
 export function EmergencySosModal({ isOpen, onClose }) {
   const { mode, setMode } = useConnectivity();
   const { t } = useLanguage();
 
-  // State
-  const [selectedType, setSelectedType] = useState(EMERGENCY_TYPES[0]);
+  const [selectedType, setSelectedType] = useState(CONSOLE_EMERGENCY_TYPES[0]);
   const [vesselName, setVesselName] = useState(() => {
     const prof = getStoredUserProfile('fisherman');
-    return prof.vesselName || 'Matsya-01 (KL-07-EF-4421)';
+    return prof.vesselName || 'Sea Warrior (IND-KL-07-MM-4421)';
   });
   const [crewCount, setCrewCount] = useState(() => {
     const prof = getStoredUserProfile('fisherman');
@@ -58,17 +100,16 @@ export function EmergencySosModal({ isOpen, onClose }) {
   const [isRefreshingGps, setIsRefreshingGps] = useState(false);
   const [nearestPort, setNearestPort] = useState(findNearestRefugePort(9.9312, 76.2673));
 
-  // Emergency triggers
+  // Deliberate confirmation state for Send Distress
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [isBeaconActive, setIsBeaconActive] = useState(false);
   const [beaconPacketsSent, setBeaconPacketsSent] = useState(0);
   const [isSirenPlaying, setIsSirenPlaying] = useState(false);
   const [isStrobeActive, setIsStrobeActive] = useState(false);
   const [strobeColor, setStrobeColor] = useState('red');
-  const [activeTab, setActiveTab] = useState('beacon'); // beacon | survival | vhf | log
-  const [distressQueue, setDistressQueue] = useState([]);
   const [lastTelegram, setLastTelegram] = useState('');
+  const [activeSurvivalTab, setActiveSurvivalTab] = useState('Hull Flooding');
 
-  // Fetch initial GPS on open
   useEffect(() => {
     if (isOpen) {
       const prof = getStoredUserProfile('fisherman');
@@ -77,12 +118,12 @@ export function EmergencySosModal({ isOpen, onClose }) {
         if (prof.crewCount) setCrewCount(prof.crewCount);
       }
       loadGps();
-      setDistressQueue(getOfflineDistressQueue());
+      setAwaitingConfirmation(false);
     } else {
-      // Clean up when modal closes
       stopEmergencySosSiren();
       setIsSirenPlaying(false);
       setIsStrobeActive(false);
+      setAwaitingConfirmation(false);
     }
   }, [isOpen]);
 
@@ -95,7 +136,7 @@ export function EmergencySosModal({ isOpen, onClose }) {
     setIsRefreshingGps(false);
   };
 
-  // Screen Strobe Effect for Nighttime Helicopter / Patrol Craft Signaling
+  // Screen Strobe Effect for Night Rescue
   useEffect(() => {
     let interval = null;
     if (isStrobeActive) {
@@ -106,7 +147,7 @@ export function EmergencySosModal({ isOpen, onClose }) {
     return () => clearInterval(interval);
   }, [isStrobeActive]);
 
-  // Satellite Packet Uplink Pulse simulation
+  // Transmit counter
   useEffect(() => {
     let interval = null;
     if (isBeaconActive) {
@@ -119,7 +160,6 @@ export function EmergencySosModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  // Trigger Satellite Beacon Broadcast
   const handleTransmitBeacon = () => {
     const distressId = `SOS-${Date.now().toString().slice(-6)}`;
     const record = {
@@ -139,17 +179,15 @@ export function EmergencySosModal({ isOpen, onClose }) {
     const telegram = formatNmeaDistressTelegram(record);
     setLastTelegram(telegram);
     queueOfflineDistressBeacon(record);
-    setDistressQueue(getOfflineDistressQueue());
     setIsBeaconActive(true);
     setBeaconPacketsSent(1);
+    setAwaitingConfirmation(false);
 
-    // If currently on cellular, suggest satellite uplink telemetry
     if (mode === '4g') {
       setMode('navic');
     }
   };
 
-  // Toggle Siren
   const handleToggleSiren = () => {
     if (isSirenPlaying) {
       stopEmergencySosSiren();
@@ -170,433 +208,404 @@ export function EmergencySosModal({ isOpen, onClose }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#030B14]/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
       {/* Visual Strobe Overlay for Night Rescue */}
       {isStrobeActive && (
         <div
           onClick={() => setIsStrobeActive(false)}
-          className={`fixed inset-0 z-50 pointer-events-auto cursor-pointer transition-colors duration-100 flex flex-col items-center justify-center text-center p-6 ${
-            strobeColor === 'red' ? 'bg-red-600 text-white' : 'bg-white text-slate-950'
+          className={`fixed inset-0 z-50 pointer-events-auto cursor-pointer flex flex-col items-center justify-center text-center p-6 ${
+            strobeColor === 'red' ? 'bg-[#DC2626] text-white' : 'bg-white text-black'
           }`}
         >
-          <div className="text-4xl sm:text-6xl font-black tracking-wider uppercase animate-bounce mb-4">
-            🚨 {t('sosDistressStrobe', 'SOS DISTRESS STROBE')} 🚨
+          <div className="text-4xl sm:text-6xl font-black uppercase mb-4 font-mono">
+            SOS DISTRESS STROBE ACTIVE
           </div>
-          <p className="text-lg sm:text-xl font-bold max-w-md">
-            {t('strobeActiveDesc', 'Signal Active for Rescue Aircraft & Patrol Vessels! Tap anywhere on screen to exit strobe.')}
+          <p className="text-base sm:text-xl font-bold max-w-md font-mono">
+            Visible to Rescue Aircraft & Coast Guard Patrol Vessels. Tap anywhere to dismiss.
           </p>
-          <div className="mt-8 px-6 py-2 rounded-full border-2 border-current text-sm font-bold uppercase">
-            {t('tapDismissFlash', 'Tap to Dismiss Flash')}
-          </div>
         </div>
       )}
 
-      {/* Main SOS Dialog Card */}
-      <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border-2 border-rose-600 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
-        {/* Urgent Header Strip */}
-        <div className="bg-gradient-to-r from-rose-700 via-red-600 to-rose-800 text-white p-4 sm:p-5 flex items-center justify-between shadow-md">
+      {/* Main Serious Distress Console Frame */}
+      <div className="relative w-full max-w-4xl bg-[#071A2B] border-2 border-[#C93C4B] shadow-2xl text-white flex flex-col max-h-[94vh] overflow-hidden my-auto animate-in zoom-in-95 duration-150">
+        {/* HEADER: EMERGENCY DISTRESS CONSOLE + TELEMETRY READOUT */}
+        <div className="bg-[#0B2942] border-b-2 border-[#C93C4B] px-4 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white text-rose-700 flex items-center justify-center font-black shadow-md shrink-0 animate-pulse">
-              <AlertOctagon className="w-6 h-6" />
+            <div className="w-9 h-9 bg-[#C93C4B] text-white flex items-center justify-center font-bold">
+              <ShieldAlert className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/30 uppercase">
-                  {t('navicBeaconBadge', 'ISRO NavIC S-Band Beacon')}
-                </span>
-                <span className="text-[11px] font-bold text-emerald-200 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-400/30 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>{t('offlineReadyBadge', '100% Offline Ready')}</span>
-                </span>
+              <div className="text-[10px] font-mono tracking-widest text-[#C93C4B] uppercase font-bold">
+                ISRO / COAST GUARD MARITIME EMERGENCY SYSTEM
               </div>
-              <h2 className="text-lg sm:text-xl font-black tracking-tight mt-0.5">
-                {t('emergencyModalTitle', 'Emergency SOS Maritime Distress Console')}
-              </h2>
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-white uppercase font-mono">
+                EMERGENCY DISTRESS CONSOLE
+              </h1>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white text-xs font-bold transition-colors"
-            title={t('closeConsole', 'Close emergency modal')}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Live Hardware GPS Strip */}
-        <div className="bg-slate-900 text-white px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 font-mono text-sky-300">
-              <MapPin className="w-4 h-4 text-rose-400" />
-              <span className="font-bold text-white text-sm">
-                {gpsData.latitude}° N, {gpsData.longitude}° E
-              </span>
-              <span className="text-[10px] text-slate-400">({gpsData.accuracy}m fix)</span>
+          {/* Telemetry Chips in Header */}
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <div className="flex items-center gap-1.5 bg-[#071A2B] px-2.5 py-1 border border-[#0D5C7A]">
+              <span className="w-2 h-2 rounded-full bg-[#1F9D72] animate-pulse" />
+              <span className="text-slate-400">GPS:</span>
+              <strong className="text-white">ACTIVE</strong>
             </div>
 
-            <span className="hidden sm:inline text-slate-600">|</span>
-
-            <div className="flex items-center gap-1.5 text-slate-300">
-              <Compass className="w-3.5 h-3.5 text-ocean-teal" />
-              <span>{t('nearestRefuge', 'Nearest Refuge')}: <strong>{nearestPort.name}</strong> (~{nearestPort.distanceNm} nm)</span>
+            <div className="flex items-center gap-1.5 bg-[#071A2B] px-2.5 py-1 border border-[#D96B3B]/50">
+              <span className="w-2 h-2 rounded-full bg-[#D96B3B]" />
+              <span className="text-slate-400">CONNECTIVITY:</span>
+              <strong className="text-[#D96B3B]">OFFLINE READY</strong>
             </div>
+
+            <div className="flex items-center gap-1.5 bg-[#071A2B] px-2.5 py-1 border border-[#0D5C7A]">
+              <MapPin className="w-3.5 h-3.5 text-[#C93C4B]" />
+              <span className="text-slate-400">POS:</span>
+              <strong className="text-white">{gpsData.latitude}°N, {gpsData.longitude}°E</strong>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 bg-[#C93C4B] hover:bg-red-700 text-white flex items-center justify-center transition-colors cursor-pointer ml-1"
+              title="Close Console"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-
-          <button
-            onClick={loadGps}
-            disabled={isRefreshingGps}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3 h-3 ${isRefreshingGps ? 'animate-spin' : ''}`} />
-            <span>{t('updateGps', 'Update GPS')}</span>
-          </button>
         </div>
 
-        {/* Navigation Tabs (Beacon / Survival / VHF / Log) */}
-        <div className="bg-slate-100 border-b border-slate-200 px-4 flex items-center gap-2 text-xs font-bold overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('beacon')}
-            className={`py-3 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeTab === 'beacon'
-                ? 'border-rose-600 text-rose-700'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Radio className="w-4 h-4" />
-            <span>{t('distressBeaconDispatchTab', '1. Distress Beacon Dispatch')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('survival')}
-            className={`py-3 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeTab === 'survival'
-                ? 'border-rose-600 text-rose-700'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <LifeBuoy className="w-4 h-4 text-amber-600" />
-            <span>{t('survivalGuideTab', '2. Offline Sea Survival Guide')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('vhf')}
-            className={`py-3 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeTab === 'vhf'
-                ? 'border-rose-600 text-rose-700'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <PhoneCall className="w-4 h-4 text-emerald-600" />
-            <span>{t('vhfChannelTab', '3. VHF Ch 16 & Coast Guard')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('log')}
-            className={`py-3 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeTab === 'log'
-                ? 'border-rose-600 text-rose-700'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FileText className="w-4 h-4 text-sky-600" />
-            <span>{t('distressAuditLogTab', 'Distress Audit Log')} ({distressQueue.length})</span>
-          </button>
-        </div>
-
-        {/* Tab 1: Primary Distress Beacon Dispatch */}
-        {activeTab === 'beacon' && (
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
-            {/* Active Beacon Notification Banner */}
-            {isBeaconActive && (
-              <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 animate-in fade-in slide-in-from-top-3 flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-rose-600 animate-ping" />
-                  <div>
-                    <span className="font-bold text-rose-950 text-sm block">
-                      {t('distressBeaconTransmitting', 'DISTRESS BEACON TRANSMITTING VIA NAVIC S-BAND (2492.0 MHz)')}
-                    </span>
-                    <span className="text-rose-700 font-mono">
-                      {t('uplinkPackets', 'Uplink Packets Broadcast')}: <strong>{beaconPacketsSent}</strong> • {t('relayingMrcc', 'Relaying to MRCC & Indian Coast Guard')}
-                    </span>
+        {/* SCROLLABLE CONSOLE BODY */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+          {/* Active Beacon Uplink Strip (If Transmitting) */}
+          {isBeaconActive && (
+            <div className="bg-[#C93C4B]/20 border-2 border-[#C93C4B] p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+              <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-[#C93C4B] animate-ping" />
+                <div>
+                  <div className="text-sm font-black text-white uppercase tracking-wider">
+                    DISTRESS BEACON TRANSMITTING VIA NAVIC S-BAND (2492.0 MHz)
+                  </div>
+                  <div className="text-slate-300 text-[11px] mt-0.5">
+                    Relaying to MRCC Kochi & Indian Coast Guard • Packets Broadcast: <strong className="text-[#1F9D72]">{beaconPacketsSent}</strong>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsBeaconActive(false)}
-                    className="px-3 py-1.5 rounded-lg bg-rose-200 hover:bg-rose-300 text-rose-900 font-bold"
-                  >
-                    {t('cancelBeacon', 'Cancel Beacon')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 1: Select Emergency Situation Category */}
-            <div>
-              <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-[11px] font-bold">1</span>
-                <span>{t('selectEmergencySituation', 'Select Your Emergency Situation')}</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                {EMERGENCY_TYPES.map((type) => {
-                  const isSelected = selectedType.id === type.id;
-                  return (
-                    <button
-                      key={type.id}
-                      type="button"
-                      onClick={() => setSelectedType(type)}
-                      className={`p-3 rounded-2xl text-left border transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? 'border-rose-600 bg-rose-50/80 shadow-sm ring-2 ring-rose-600/30'
-                          : 'border-slate-200 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span
-                            className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded"
-                            style={{ backgroundColor: `${type.color}15`, color: type.color }}
-                          >
-                            {t(type.urgency)}
-                          </span>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-rose-600" />}
-                        </div>
-                        <h4 className="font-bold text-xs text-slate-900 leading-snug">{t(type.title)}</h4>
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-2 leading-tight">{t(type.description)}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Step 2: Vessel & Crew Parameters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs">
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1 flex items-center gap-1">
-                  <Ship className="w-3.5 h-3.5 text-ocean-teal" />
-                  <span>{t('vesselNameLabel', 'Vessel Name & Registration')}</span>
-                </label>
-                <input
-                  type="text"
-                  value={vesselName}
-                  onChange={(e) => setVesselName(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1 flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-ocean-teal" />
-                  <span>{t('crewCountLabel', 'Total Crew on Board')}</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={crewCount}
-                    onChange={(e) => setCrewCount(Number(e.target.value))}
-                    className="w-24 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  />
-                  <span className="text-[11px] text-slate-500">{t('livesOnBoard', 'Lives on board to rescue')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3: Big Emergency Actions */}
-            <div className="space-y-3 pt-2">
-              <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-[11px] font-bold">2</span>
-                <span>{t('dispatchProtocols', 'Dispatch Offline Rescue Protocols')}</span>
-              </div>
-
-              {/* Primary NavIC Satellite Broadcast Button */}
               <button
                 type="button"
-                onClick={handleTransmitBeacon}
-                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white font-black text-sm md:text-base tracking-wide shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 border-2 border-white/20 active:scale-[0.99]"
+                onClick={() => setIsBeaconActive(false)}
+                className="px-3 py-1 bg-white hover:bg-slate-200 text-slate-900 font-bold font-mono text-xs transition-colors"
               >
-                <Radio className="w-6 h-6 animate-pulse" />
-                <span>{t('broadcastBeaconBtn', 'BROADCAST NAVIC SATELLITE BEACON (OFFLINE ACTIVE)')}</span>
+                CANCEL BEACON
+              </button>
+            </div>
+          )}
+
+          {/* MAIN: SELECT EMERGENCY TYPE (6 Physical-Button-Inspired Controls) */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xs font-mono uppercase font-bold tracking-widest text-[#0F8B8D]">
+                SELECT EMERGENCY TYPE
+              </h2>
+              <span className="text-[10px] font-mono text-slate-400">CHOOSE PRIMARY NATURE OF CASUALTY</span>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {CONSOLE_EMERGENCY_TYPES.map((type) => {
+                const isSelected = selectedType.id === type.id;
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedType(type);
+                      setAwaitingConfirmation(false);
+                    }}
+                    className={`p-3.5 text-left transition-all border-2 relative cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#0B2942] border-[#C93C4B] text-white shadow-inner ring-2 ring-[#C93C4B]/50'
+                        : 'bg-[#071A2B] border-[#0D5C7A]/60 text-slate-300 hover:border-slate-400 hover:bg-[#0B2942]/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-[10px] font-mono font-black uppercase px-1.5 py-0.2 ${
+                        isSelected ? 'bg-[#C93C4B] text-white' : 'bg-[#0B2942] text-slate-400'
+                      }`}>
+                        {type.code}
+                      </span>
+                      {isSelected ? (
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#C93C4B] animate-ping" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-slate-600" />
+                      )}
+                    </div>
+                    <div className="font-mono font-black text-sm text-white tracking-tight uppercase">
+                      {type.title}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 mt-1 line-clamp-1">
+                      {type.subtitle}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* DISTRESS READY STATUS PANEL & DELIBERATE SEND ACTION */}
+          <div className="bg-[#0B2942] border border-[#0D5C7A] p-4 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#0D5C7A]/60 pb-2">
+              <div className="flex items-center gap-2">
+                <Radio className="w-4 h-4 text-[#0F8B8D]" />
+                <span className="text-xs font-mono font-bold uppercase text-white tracking-wider">
+                  DISTRESS READY
+                </span>
+              </div>
+              <span className="text-[10px] font-mono bg-[#1F9D72]/20 text-[#1F9D72] px-2 py-0.5 border border-[#1F9D72]/40 font-bold">
+                TELEMETRY PRE-COMPUTED
+              </span>
+            </div>
+
+            {/* The 5 Key Telemetry Points Requested */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs font-mono">
+              <div className="p-2.5 bg-[#071A2B] border border-[#0D5C7A]/50">
+                <span className="text-[10px] text-slate-400 uppercase block">Location:</span>
+                <span className="font-bold text-white text-xs mt-0.5 block truncate">
+                  {gpsData.latitude}°N, {gpsData.longitude}°E
+                </span>
+              </div>
+
+              <div className="p-2.5 bg-[#071A2B] border border-[#0D5C7A]/50">
+                <span className="text-[10px] text-slate-400 uppercase block">Nearest Harbor:</span>
+                <span className="font-bold text-[#0F8B8D] text-xs mt-0.5 block truncate">
+                  {nearestPort.name.split(',')[0]}
+                </span>
+              </div>
+
+              <div className="p-2.5 bg-[#071A2B] border border-[#0D5C7A]/50">
+                <span className="text-[10px] text-slate-400 uppercase block">Bearing:</span>
+                <span className="font-bold text-white text-xs mt-0.5 block">
+                  068° ENE
+                </span>
+              </div>
+
+              <div className="p-2.5 bg-[#071A2B] border border-[#0D5C7A]/50">
+                <span className="text-[10px] text-slate-400 uppercase block">Distance:</span>
+                <span className="font-bold text-amber-400 text-xs mt-0.5 block">
+                  {nearestPort.distanceNm} NM
+                </span>
+              </div>
+
+              <div className="p-2.5 bg-[#071A2B] border border-[#0D5C7A]/50 col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-slate-400 uppercase block">VHF Channel:</span>
+                <span className="font-bold text-[#1F9D72] text-xs mt-0.5 block">
+                  Ch 16 (156.800 MHz)
+                </span>
+              </div>
+            </div>
+
+            {/* SEND DISTRESS (Deliberate 2-Step Confirmation) */}
+            <div className="pt-2">
+              {!awaitingConfirmation ? (
+                <button
+                  type="button"
+                  onClick={() => setAwaitingConfirmation(true)}
+                  className="w-full py-4 px-6 bg-[#C93C4B] hover:bg-red-700 text-white font-mono font-black text-sm sm:text-base tracking-widest uppercase transition-all shadow-lg flex items-center justify-center gap-3 cursor-pointer border border-white/20 active:scale-[0.99]"
+                >
+                  <Send className="w-5 h-5 text-white" />
+                  <span>[SEND DISTRESS] — BROADCAST {selectedType.title} BEACON</span>
+                </button>
+              ) : (
+                <div className="bg-[#C93C4B]/20 border-2 border-[#C93C4B] p-4 text-center space-y-3 animate-in fade-in">
+                  <div className="text-sm sm:text-base font-black font-mono text-white uppercase tracking-wider">
+                    CONFIRM IMMEDIATE MARITIME DISTRESS BROADCAST?
+                  </div>
+                  <p className="text-xs font-mono text-slate-300 max-w-lg mx-auto">
+                    This will transmit an official distress telegram via NavIC S-band to the Indian Coast Guard MRCC with vessel ID: <strong>{vesselName}</strong> and {crewCount} lives on board.
+                  </p>
+                  <div className="flex items-center justify-center gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleTransmitBeacon}
+                      className="px-6 py-2.5 bg-[#C93C4B] hover:bg-red-700 text-white font-mono font-black text-sm uppercase transition-colors border border-white/40 cursor-pointer shadow-lg"
+                    >
+                      YES, TRANSMIT DISTRESS BEACON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAwaitingConfirmation(false)}
+                      className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs uppercase transition-colors cursor-pointer"
+                    >
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Secondary Physical Action Tools: Siren, Strobe, Call 1554, Offline SMS */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-xs">
+              <button
+                type="button"
+                onClick={handleToggleSiren}
+                className={`p-2.5 border text-center transition-colors cursor-pointer ${
+                  isSirenPlaying
+                    ? 'bg-amber-500 text-slate-950 font-bold border-amber-300 animate-pulse'
+                    : 'bg-[#071A2B] border-[#0D5C7A] text-slate-300 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  {isSirenPlaying ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-[#0F8B8D]" />}
+                  <span className="font-bold">{isSirenPlaying ? 'STOP SIREN' : 'AUDIO SIREN'}</span>
+                </div>
+                <span className="text-[10px] text-slate-400">960Hz Morse SOS</span>
               </button>
 
-              {/* Secondary Safety Tools: Siren, Strobe, SMS, Call */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                {/* Siren Button */}
-                <button
-                  type="button"
-                  onClick={handleToggleSiren}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
-                    isSirenPlaying
-                      ? 'bg-amber-100 border-amber-400 text-amber-900 ring-2 ring-amber-500 animate-pulse'
-                      : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  {isSirenPlaying ? <VolumeX className="w-5 h-5 text-amber-700" /> : <Volume2 className="w-5 h-5 text-ocean-teal" />}
-                  <span className="text-xs font-bold">{isSirenPlaying ? t('stopSirenBtn', 'Stop Siren') : t('audioSirenBtn', 'Audio Siren')}</span>
-                  <span className="text-[10px] text-slate-400">{t('morseSosSub', '960Hz / Morse SOS')}</span>
-                </button>
+              <button
+                type="button"
+                onClick={() => setIsStrobeActive(true)}
+                className="p-2.5 bg-[#071A2B] border border-[#0D5C7A] text-slate-300 hover:text-white text-center transition-colors cursor-pointer"
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Flashlight className="w-4 h-4 text-[#C93C4B]" />
+                  <span className="font-bold">NIGHT STROBE</span>
+                </div>
+                <span className="text-[10px] text-slate-400">Visual Screen Flash</span>
+              </button>
 
-                {/* Strobe Light Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsStrobeActive(true)}
-                  className="p-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 flex flex-col items-center justify-center gap-1 transition-all"
-                >
-                  <Flashlight className="w-5 h-5 text-rose-600" />
-                  <span className="text-xs font-bold">{t('nightStrobeBtn', 'Night Strobe')}</span>
-                  <span className="text-[10px] text-slate-400">{t('screenFlashSub', 'Screen Flash Beacon')}</span>
-                </button>
+              <a
+                href="tel:1554"
+                className="p-2.5 bg-[#071A2B] border border-[#0D5C7A] text-slate-300 hover:text-white text-center transition-colors cursor-pointer"
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <PhoneCall className="w-4 h-4 text-[#1F9D72]" />
+                  <span className="font-bold">CALL 1554</span>
+                </div>
+                <span className="text-[10px] text-[#1F9D72]">Coast Guard Toll-Free</span>
+              </a>
 
-                {/* Coast Guard Call 1554 */}
-                <a
-                  href="tel:1554"
-                  className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-950 flex flex-col items-center justify-center gap-1 transition-all"
-                >
-                  <PhoneCall className="w-5 h-5 text-emerald-600" />
-                  <span className="text-xs font-bold">{t('callIcgBtn', 'Call 1554')}</span>
-                  <span className="text-[10px] text-emerald-700">{t('icgTollFreeSub', 'ICG Toll-Free 24x7')}</span>
-                </a>
+              <a
+                href={smsUrl}
+                className="p-2.5 bg-[#071A2B] border border-[#0D5C7A] text-slate-300 hover:text-white text-center transition-colors cursor-pointer"
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <MessageSquare className="w-4 h-4 text-[#0F8B8D]" />
+                  <span className="font-bold">OFFLINE SMS</span>
+                </div>
+                <span className="text-[10px] text-slate-400">Pre-filled GPS Text</span>
+              </a>
+            </div>
+          </div>
 
-                {/* Send Offline SMS */}
-                <a
-                  href={smsUrl}
-                  className="p-3 rounded-xl bg-sky-50 border border-sky-300 hover:bg-sky-100 text-sky-950 flex flex-col items-center justify-center gap-1 transition-all"
-                >
-                  <MessageSquare className="w-5 h-5 text-sky-600" />
-                  <span className="text-xs font-bold">{t('offlineSmsBtn', 'Offline SMS')}</span>
-                  <span className="text-[10px] text-sky-700">{t('prefilledGpsSub', 'Pre-filled GPS text')}</span>
-                </a>
+          {/* Transmitted Telegram Readout */}
+          {lastTelegram && (
+            <div className="p-3 bg-[#030B14] border border-[#0D5C7A] font-mono text-xs text-sky-300">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">
+                TRANSMITTED NMEA 0183 SATELLITE BEACON PACKET:
+              </span>
+              <code>{lastTelegram}</code>
+            </div>
+          )}
+
+          {/* BELOW: OFFLINE SURVIVAL PROCEDURES (4 Protocols) */}
+          <div className="bg-[#0B2942] border border-[#0D5C7A] p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-[#0D5C7A]/60 pb-2">
+              <div className="flex items-center gap-2">
+                <LifeBuoy className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-mono font-bold uppercase text-white tracking-wider">
+                  OFFLINE SURVIVAL PROCEDURES
+                </h3>
               </div>
+              <span className="text-[10px] font-mono text-slate-400">100% OFFLINE REFERENCE</span>
             </div>
 
-            {/* Generated NMEA Telegram Preview */}
-            {lastTelegram && (
-              <div className="p-3 rounded-xl bg-slate-900 text-sky-300 font-mono text-[11px] leading-relaxed border border-slate-800">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">
-                  {t('transmittedPacket', 'Transmitted NMEA 0183 Satellite Packet:')}
-                </span>
-                <code>{lastTelegram}</code>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 2: Offline Sea Survival Guide */}
-        {activeTab === 'survival' && (
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
-              <strong>{t('offlineSurvivalGuideTitle', 'Offline Maritime First-Aid & Survival Instructions')}:</strong> {t('offlineSurvivalGuideDesc', 'Read and follow immediately while awaiting Coast Guard rescue. These guidelines work completely offline.')}
+            {/* 4 Protocol Selector Chips */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {['Hull Flooding', 'Engine Failure', 'MOB', 'Hypothermia'].map((proto) => {
+                const isProtoActive = activeSurvivalTab === proto;
+                return (
+                  <button
+                    key={proto}
+                    type="button"
+                    onClick={() => setActiveSurvivalTab(proto)}
+                    className={`p-2 text-left text-xs font-mono font-bold uppercase border transition-colors cursor-pointer ${
+                      isProtoActive
+                        ? 'bg-[#071A2B] border-[#0F8B8D] text-white ring-1 ring-[#0F8B8D]'
+                        : 'bg-[#071A2B]/60 border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {proto}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="space-y-3">
-              {SURVIVAL_PROTOCOLS.map((protocol, idx) => (
-                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                  <h4 className="font-bold text-sm text-slate-900 mb-2 flex items-center gap-2">
-                    <LifeBuoy className="w-4 h-4 text-ocean-teal" />
-                    <span>{t(protocol.title)}</span>
-                  </h4>
-                  <ul className="space-y-1.5 list-disc list-inside text-xs text-slate-700 leading-relaxed">
-                    {protocol.steps.map((step, sIdx) => (
-                      <li key={sIdx} className="pl-1">{t(step)}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+            {/* Protocol Detail Content */}
+            <div className="p-3 bg-[#071A2B] border border-[#0D5C7A]/40 text-xs font-mono space-y-2">
+              {activeSurvivalTab === 'Hull Flooding' && (
+                <ul className="list-disc list-inside space-y-1.5 text-slate-300">
+                  <li>Start bilge pump immediately and assign 2 crew to bailing buckets.</li>
+                  <li>Locate breach; drive soft wooden wedges, canvas rolls, or cushions into the opening.</li>
+                  <li>Maneuver vessel so breached side is on the leeward (sheltered) side away from waves.</li>
+                  <li>Don life jackets (PFDs) on all crew before attempting internal repairs.</li>
+                </ul>
+              )}
 
-        {/* Tab 3: VHF Channel 16 & Coast Guard Directory */}
-        {activeTab === 'vhf' && (
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs">
-            <div className="bg-ocean-deep text-white p-4 rounded-2xl border border-ocean-navy space-y-2">
-              <span className="text-[10px] font-mono text-sky-300 uppercase font-bold">{t('maydayScriptTitle', 'Standard Mayday Script (VHF Channel 16 - 156.800 MHz)')}</span>
-              <p className="font-mono text-xs leading-relaxed bg-black/30 p-3 rounded-xl border border-white/10">
-                "MAYDAY, MAYDAY, MAYDAY.<br />
-                THIS IS FISHING VESSEL {vesselName.toUpperCase()}.<br />
-                OUR POSITION IS {gpsData.latitude}° N, {gpsData.longitude}° E.<br />
-                NATURE OF DISTRESS: {selectedType.title.toUpperCase()}.<br />
-                WE HAVE {crewCount} PERSONS ON BOARD.<br />
-                WE REQUIRE IMMEDIATE SEARCH AND RESCUE ASSISTANCE.<br />
-                OVER."
-              </p>
-            </div>
+              {activeSurvivalTab === 'Engine Failure' && (
+                <ul className="list-disc list-inside space-y-1.5 text-slate-300">
+                  <li>Deploy sea-anchor (drogue) or bucket tied to bowline to keep the bow pointing into the swell.</li>
+                  <li>NEVER let the boat sit beam-on (broadside) to breaking waves as rolling leads to capsizing.</li>
+                  <li>Check fuel lines for airlocks or water contamination in sediment bowl.</li>
+                  <li>Hoist radar reflector or bright orange flag on mast for patrol craft radar detection.</li>
+                </ul>
+              )}
 
-            <div className="space-y-2">
-              <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">
-                {t('regionalMrccTitle', 'Regional Maritime Rescue Coordination Centres (MRCC)')}
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-bold text-slate-900 block">MRCC Kochi (Kerala / Lakshadweep)</span>
-                  <span className="text-slate-500 font-mono">0484-2216444 / VHF Ch 16</span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-bold text-slate-900 block">MRCC Mumbai (Maharashtra / Goa)</span>
-                  <span className="text-slate-500 font-mono">022-24388065 / VHF Ch 16</span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-bold text-slate-900 block">MRCC Chennai (Tamil Nadu / Bay of Bengal)</span>
-                  <span className="text-slate-500 font-mono">044-23460405 / VHF Ch 16</span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="font-bold text-slate-900 block">MRCC Port Blair (Andaman & Nicobar)</span>
-                  <span className="text-slate-500 font-mono">03192-245530 / VHF Ch 16</span>
-                </div>
-              </div>
+              {activeSurvivalTab === 'MOB' && (
+                <ul className="list-disc list-inside space-y-1.5 text-slate-300">
+                  <li>Shout "MAN OVERBOARD!" loudly to alert all crew.</li>
+                  <li>Immediately throw a life ring, buoyant cushion, or floating buoy toward victim.</li>
+                  <li>Keep eyes locked onto person in water; point arm continuously at their position.</li>
+                  <li>Mark current GPS position instantly by pressing the SOS GPS mark button.</li>
+                </ul>
+              )}
+
+              {activeSurvivalTab === 'Hypothermia' && (
+                <ul className="list-disc list-inside space-y-1.5 text-slate-300">
+                  <li>Assume H.E.L.P. posture: cross arms tightly across chest and pull knees to chin.</li>
+                  <li>If multiple crew are in water, huddle tightly in a circle facing inward.</li>
+                  <li>Keep head and neck above water; do not attempt long swim unless within 100 meters.</li>
+                </ul>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Tab 4: Distress Audit Log */}
-        {activeTab === 'log' && (
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-3 flex-1 text-xs">
-            <div className="text-slate-500 flex items-center justify-between">
-              <span>{t('queuedBeaconsDesc', 'Locally Queued Distress Beacons (Stored in IndexedDB / LocalStorage)')}</span>
-              <span className="font-mono font-bold text-ocean-teal">{distressQueue.length} records</span>
+          {/* ALSO: VHF MAYDAY SCRIPT */}
+          <div className="bg-[#030B14] border border-[#0D5C7A] p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono text-[#0F8B8D] uppercase font-bold">
+              <span>VHF MAYDAY SCRIPT (CHANNEL 16 - 156.800 MHz)</span>
+              <span className="text-slate-400">READ CLEARLY INTO RADIO HANDSET</span>
             </div>
-
-            {distressQueue.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                {t('noDistressLogged', 'No past distress signals logged on this vessel device.')}
-              </div>
-            ) : (
-              distressQueue.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="font-bold text-slate-900 block text-sm">
-                      {item.emergencyTitle || item.emergencyType}
-                    </span>
-                    <span className="text-slate-500 font-mono text-[11px]">
-                      {item.latitude}°N, {item.longitude}°E • Crew: {item.crewCount} • {item.timestamp}
-                    </span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-emerald-100 text-emerald-800">
-                    {item.status}
-                  </span>
-                </div>
-              ))
-            )}
+            <div className="p-3 bg-[#071A2B] border border-white/10 font-mono text-xs text-white leading-relaxed">
+              "MAYDAY, MAYDAY, MAYDAY.<br />
+              THIS IS FISHING VESSEL {vesselName.toUpperCase()}.<br />
+              OUR POSITION IS {gpsData.latitude}° N, {gpsData.longitude}° E.<br />
+              NATURE OF DISTRESS: {selectedType.title}.<br />
+              WE HAVE {crewCount} PERSONS ON BOARD.<br />
+              WE REQUIRE IMMEDIATE SEARCH AND RESCUE ASSISTANCE.<br />
+              OVER."
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="text-slate-500 font-medium">
-            {t('navicDirectUplink', 'NavIC IRNSS S-band direct uplink • Emergency Channel active')}
-          </div>
+        {/* FOOTER */}
+        <div className="bg-[#0B2942] border-t border-[#0D5C7A] px-4 py-2.5 flex items-center justify-between text-xs font-mono text-slate-400 shrink-0">
+          <span>NAVIC IRNSS S-BAND DIRECT SATELLITE UPLINK ACTIVE</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold transition-colors"
+            className="px-3 py-1 bg-[#071A2B] hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold transition-colors cursor-pointer"
           >
-            {t('closeConsole', 'Close Console')}
+            DISMISS CONSOLE
           </button>
         </div>
       </div>

@@ -45,7 +45,7 @@ export function ExplainabilityPanel({ scenario, onClose = null }) {
               <div className="flex items-center gap-2">
                 <h3 className="text-base md:text-lg font-bold">{t('xaiTitle', 'Explainable AI (XAI) Reasoning Audit')}</h3>
                 <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-sky-400/20 text-sky-200 border border-sky-400/30">
-                  {t('isroStandards', 'ISRO SIH26176 Standards')}
+                  {t('isroStandards', 'ISRO Marine Safety Standards')}
                 </span>
               </div>
               <p className="text-xs text-sky-100/80">
