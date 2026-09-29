@@ -1,9 +1,11 @@
 import asyncio
 import logging
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.app.config import settings
 from backend.app.database import init_db
@@ -86,8 +88,8 @@ app.include_router(orca_ai_router)
 app.include_router(satellite_router)
 app.include_router(system_router)
 
-@app.get("/")
-async def root():
+@app.get("/api")
+async def api_root():
     return {
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
@@ -95,3 +97,18 @@ async def root():
         "documentation": "/docs",
         "health": "/api/system/health"
     }
+
+# Production: If static frontend build exists in dist/, serve it seamlessly from the root
+dist_dir = Path(__file__).resolve().parent.parent.parent / "dist"
+if dist_dir.exists() and (dist_dir / "index.html").exists():
+    app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="static")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "service": settings.PROJECT_NAME,
+            "version": settings.VERSION,
+            "status": "OPERATIONAL",
+            "documentation": "/docs",
+            "health": "/api/system/health"
+        }

@@ -5,7 +5,7 @@
  * INCOIS PFZ zones, alert lifecycle management, and multi-agent AI query engine.
  */
 
-const API_BASE_URL = ''; // Proxied via Vite to http://localhost:8000
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, ''); // Supports VITE_API_BASE_URL in production, or proxy in dev
 
 export async function fetchApi(endpoint, options = {}) {
   try {

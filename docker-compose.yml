@@ -1,0 +1,21 @@
+services:
+  orca-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orca-platform
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=sqlite:///./orca_marine.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=gemini-flash-latest
+    restart: unless-stopped
+    volumes:
+      - orca-data:/app
+
+volumes:
+  orca-data:
