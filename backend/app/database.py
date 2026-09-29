@@ -39,3 +39,11 @@ def get_db():
 def init_db():
     from backend.app.models import marine_observation, alert, bulletin, pfz, data_refresh_log
     Base.metadata.create_all(bind=engine)
+
+if __name__ == "__main__":
+    print(f"Connecting to database: {engine.url.host or 'local SQLite'}...")
+    init_db()
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    print(f"[SUCCESS] Database tables verified ({len(tables)} tables): {tables}")
