@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRole, USER_ROLES } from '../../context/RoleContext';
 import {
@@ -42,6 +42,14 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
   // Admin login form state
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+
+  // Guarantee email/ID and password fields remain strictly unfilled on mount and tab switch
+  useEffect(() => {
+    setLoginId('');
+    setLoginPassword('');
+    setAdminEmail('');
+    setAdminPassword('');
+  }, [activeTab]);
 
   // Registration form state
   const [regRole, setRegRole] = useState('fisherman');
@@ -647,18 +655,40 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
                   </span>
                 </div>
 
-                <form onSubmit={handleLoginSubmit} className="space-y-3">
+                <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-3">
+                  {/* Hidden decoy fields to trap and defuse browser credential autofill */}
+                  <input
+                    type="text"
+                    name="orca_decoy_identity"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    autoComplete="off"
+                    style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0, height: 0, width: 0, pointerEvents: 'none' }}
+                  />
+                  <input
+                    type="password"
+                    name="orca_decoy_pass"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    autoComplete="new-password"
+                    style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0, height: 0, width: 0, pointerEvents: 'none' }}
+                  />
+
                   <div>
                     <label className="block text-[10px] font-mono font-bold text-slate-300 uppercase mb-1">
                       EMAIL / REALCRAFT REG / SERVICE ID <span className="text-[#D96B3B]">*</span>
                     </label>
                     <input
                       type="text"
+                      name="orca_user_entry_id"
+                      id="orca_user_entry_id"
                       required
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                       value={loginId}
                       onChange={(e) => setLoginId(e.target.value)}
                       placeholder="Enter registered email or Service / RealCraft ID"
-                      autoComplete="username"
+                      autoComplete="off"
                       className="w-full bg-[#051422] border border-[#18476F] rounded px-3 py-1.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-[#2EAFD0]"
                     />
                   </div>
@@ -669,8 +699,12 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
                     </label>
                     <input
                       type="password"
-                      autoComplete="current-password"
+                      name="orca_user_entry_pass"
+                      id="orca_user_entry_pass"
+                      autoComplete="new-password"
                       required
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Enter password"
@@ -767,14 +801,36 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
 
               {/* Right Column: Form */}
               <div className="bg-[#0B2942] border border-[#18476F] rounded p-4 space-y-3">
-                <form onSubmit={handleAdminLoginSubmit} className="space-y-3">
+                <form onSubmit={handleAdminLoginSubmit} autoComplete="off" className="space-y-3">
+                  {/* Hidden decoy fields to trap and defuse browser credential autofill */}
+                  <input
+                    type="text"
+                    name="orca_admin_decoy_id"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    autoComplete="off"
+                    style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0, height: 0, width: 0, pointerEvents: 'none' }}
+                  />
+                  <input
+                    type="password"
+                    name="orca_admin_decoy_pass"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    autoComplete="new-password"
+                    style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0, height: 0, width: 0, pointerEvents: 'none' }}
+                  />
+
                   <div>
                     <label className="block text-[10px] font-mono font-bold text-slate-300 uppercase mb-1">
                       ADMINISTRATOR EMAIL ID <span className="text-[#D96B3B]">*</span>
                     </label>
                     <input
-                      type="email"
+                      type="text"
+                      name="orca_admin_entry_id"
+                      id="orca_admin_entry_id"
                       required
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                       autoComplete="off"
                       value={adminEmail}
                       onChange={(e) => setAdminEmail(e.target.value)}
@@ -789,8 +845,12 @@ export function MaritimeAuthPortal({ onSuccessfulAuth = null }) {
                     </label>
                     <input
                       type="password"
-                      autoComplete="off"
+                      name="orca_admin_entry_token"
+                      id="orca_admin_entry_token"
+                      autoComplete="new-password"
                       required
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
                       placeholder="Enter security access token"
